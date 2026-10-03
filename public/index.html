@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedQuest - Dinâmico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class', theme: { extend: {} } }</script>
+    <style>
+        body { transition: background-color 0.3s, color 0.3s; }
+        .page-link { cursor: pointer; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: 0.2s; border: 1px solid #e5e7eb; }
+        .dark .page-link { border-color: #374151; }
+        .page-link.active { background-color: #2563eb; color: white; border-color: #2563eb; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen font-sans">
+
+    <nav class="bg-white dark:bg-gray-800 shadow p-4 flex justify-between items-center sticky top-0 z-50">
+        <h1 class="text-2xl font-black text-blue-600 dark:text-blue-400 cursor-pointer" onclick="mostrarDashboard()">MedQuest</h1>
+        <div class="flex items-center gap-4">
+            <button id="theme-toggle" class="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition" title="Modo Noturno">🌙</button>
+            <button id="btn-logout" class="hidden text-red-500 font-bold hover:underline">Sair</button>
+        </div>
+    </nav>
+
+    <!-- TELA DE LOGIN -->
+    <div id="auth-screen" class="max-w-md mx-auto mt-20 bg-white dark:bg-gray-800 p-8 rounded-xl shadow border dark:border-gray-700">
+        <h2 class="text-2xl font-bold mb-6 text-center">Entrar</h2>
+        <form id="auth-form" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">Usuário</label>
+                <input type="text" id="username" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Senha</label>
+                <input type="password" id="password" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition font-bold">Entrar</button>
+        </form>
+    </div>
+
+    <!-- PAINEL PRINCIPAL -->
+    <div id="app-screen" class="hidden max-w-7xl mx-auto mt-6 p-4 grid grid-cols-1 xl:grid-cols-4 gap-6">
+        
+        <div class="xl:col-span-3 flex flex-col gap-6">
+            
+            <!-- DASHBOARD (PÁGINA INICIAL) -->
+            <div id="dashboard-view" class="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-sm border dark:border-gray-700">
+                <h2 class="text-3xl font-bold mb-2">Visão Geral do Desempenho</h2>
+                <p class="text-gray-500 dark:text-gray-400 mb-8">Acompanhe suas estatísticas de estudos.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-center">
+                        <p class="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase">Questões Feitas</p>
+                        <p class="text-4xl font-black mt-2" id="stat-total">0</p>
+                    </div>
+                    <div class="p-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-center">
+                        <p class="text-sm font-bold text-green-600 dark:text-green-400 uppercase">Acertos</p>
+                        <p class="text-4xl font-black mt-2 text-green-700 dark:text-green-500" id="stat-acertos">0</p>
+                    </div>
+                    <div class="p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-center">
+                        <p class="text-sm font-bold text-red-600 dark:text-red-400 uppercase">Erros</p>
+                        <p class="text-4xl font-black mt-2 text-red-700 dark:text-red-500" id="stat-erros">0</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-center">
+                    <button onclick="mostrarSessaoQuestoes()" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-blue-700 transition shadow-lg">
+                        Iniciar Sessão de Questões
+                    </button>
+                </div>
+            </div>
+
+            <!-- SESSÃO DE QUESTÕES -->
+            <div id="questoes-view" class="hidden flex-col gap-6">
+                <!-- Filtros -->
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border dark:border-gray-700">
+                    <h3 class="font-bold text-lg mb-4 border-b pb-2 dark:border-gray-700 flex justify-between items-center">
+                        <span>Filtros de Busca</span>
+                        <span id="contador-questoes" class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 py-1 px-3 rounded-full">Carregando...</span>
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-3">
+                            <input type="text" id="filtro-busca" placeholder="Pesquisar palavra-chave..." class="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-justify">
+                        </div>
+
+                        <div class="md:col-span-3 flex flex-wrap gap-6 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border dark:border-gray-600">
+                            <label class="flex items-center gap-2 cursor-pointer font-medium text-sm"><input type="checkbox" id="chk-ineditas" class="w-4 h-4 text-blue-600 rounded"> Inéditas</label>
+                            <label class="flex items-center gap-2 cursor-pointer font-medium text-sm"><input type="checkbox" id="chk-acertos" class="w-4 h-4 text-green-600 rounded"> Acertos</label>
+                            <label class="flex items-center gap-2 cursor-pointer font-medium text-sm"><input type="checkbox" id="chk-erradas" class="w-4 h-4 text-red-600 rounded"> Erros</label>
+                        </div>
+
+                        <div>
+                            <select id="filtro-materia" class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-sm"><option value="Todos">Todas as Matérias</option></select>
+                        </div>
+                        <div>
+                            <select id="filtro-assunto" disabled class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-sm opacity-50"><option value="Todos">Todos os Conteúdos</option></select>
+                        </div>
+                        <div>
+                            <select id="filtro-subassunto" disabled class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-sm opacity-50"><option value="Todos">Todos os Assuntos</option></select>
+                        </div>
+
+                        <div class="md:col-span-3">
+                            <button id="btn-filtrar" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition font-bold text-lg shadow-md">Pesquisar no Banco</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="questoes-container" class="space-y-6"></div>
+                <div id="paginacao-container" class="mt-4 mb-12 flex flex-wrap justify-center gap-2"></div>
+            </div>
+        </div>
+
+        <!-- BARRA LATERAL -->
+        <aside class="xl:col-span-1 hidden xl:block">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700 sticky top-24 flex flex-col items-center">
+                <div class="w-24 h-24 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center mb-4 shadow-inner text-4xl font-bold uppercase" id="sidebar-avatar">D</div>
+                <h3 class="font-bold text-xl mb-1 text-center" id="sidebar-user-name">Davi</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center" id="sidebar-role">Medicina</p>
+                <div class="w-full border-t dark:border-gray-700 pt-6">
+                    <button onclick="mostrarDashboard()" class="w-full py-2 bg-gray-100 dark:bg-gray-700 font-semibold rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">Ver Meu Desempenho</button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
