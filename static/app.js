@@ -185,20 +185,25 @@ function renderizarQuestoesUI(questoes) {
     const container = document.getElementById('questoes-container');
     if(!container) return;
     container.innerHTML = '';
-    if(!questoes || questoes.length === 0) { container.innerHTML = '<div class="p-8 bg-white rounded-2xl text-center text-gray-500">Nenhuma questão encontrada.</div>'; return; }
+    
+    if(!questoes || questoes.length === 0) { 
+        container.innerHTML = '<div class="p-8 bg-white rounded-2xl text-center text-gray-500">Nenhuma questão encontrada.</div>'; 
+        return; 
+    }
 
     questoes.forEach((q, idx) => {
         const status = progressoUsuario[q.id];
         let tag = '';
         if (status && status.timestamp && ((Date.now() - status.timestamp) / 3600000 >= 1)) {
             const cor = status.acertou ? 'bg-green-500' : 'bg-red-500';
-            tag = `<div class="absolute -top-3 right-10 ${cor} text-white px-4 py-1 rounded-full text-xs font-bold shadow-lg animate-fade-in">${status.acertou ? 'Respondida Corretamente' : 'Respondida Incorretamente'}</div>`;
+            tag = `<div class="absolute -top-3 right-6 md:right-10 ${cor} text-white px-3 py-1 rounded-full text-[10px] md:text-xs font-bold shadow-lg animate-fade-in">${status.acertou ? 'Correta' : 'Incorreta'}</div>`;
         }
 
-        let alts = `<div class="mt-6 space-y-3" id="alts-${q.id}">`;
+        let alts = `<div class="mt-5 space-y-3" id="alts-${q.id}">`;
         q.alternativas.forEach(alt => {
             const letra = alt.charAt(0);
-            let btnClasses = "w-full text-justify p-4 border rounded-xl transition-all duration-300 ";
+            // text-sm para celular, md:text-base para PC (aumenta o texto das alternativas)
+            let btnClasses = "w-full text-left p-4 border rounded-xl transition-all duration-300 text-sm md:text-base ";
             if (status) {
                 btnClasses += "cursor-not-allowed opacity-80 ";
                 if (letra === q.gabarito_letra) btnClasses += "bg-green-50 border-green-400 text-green-900 font-bold "; 
@@ -209,12 +214,11 @@ function renderizarQuestoesUI(questoes) {
         });
         alts += `</div>`;
 
-        // NOVO: Sistema de Reporte Integrado no Card
         const iconeBandeira = `<svg class="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path></svg>`;
         const btnReport = `<button onclick="document.getElementById('report-box-${q.id}').classList.toggle('hidden')" class="text-gray-300 hover:text-red-500 transition" title="Reportar erro nesta questão">${iconeBandeira}</button>`;
         const boxReport = `
             <div id="report-box-${q.id}" class="hidden mt-4 p-4 bg-red-50 border border-red-100 rounded-xl animate-fade-in">
-                <p class="text-xs font-bold text-red-700 mb-2 uppercase tracking-wide">Reportar Problema</p>
+                <p class="text-[10px] md:text-xs font-bold text-red-700 mb-2 uppercase tracking-wide">Reportar Problema</p>
                 <textarea id="texto-report-${q.id}" rows="2" class="w-full p-3 rounded-lg border border-red-200 text-sm outline-none focus:ring-2 focus:ring-red-400 resize-none" placeholder="Ex: Gabarito incorreto, alternativa faltando..."></textarea>
                 <div class="flex justify-end gap-3 mt-2">
                     <button onclick="document.getElementById('report-box-${q.id}').classList.add('hidden')" class="text-sm text-gray-500 hover:underline">Cancelar</button>
@@ -222,17 +226,21 @@ function renderizarQuestoesUI(questoes) {
                 </div>
             </div>`;
 
-        const btnRes = `<div class="flex justify-between items-center mt-6">
-                            <button onclick="mostrarResolucao('${q.id}', false)" class="text-blue-600 font-bold hover:underline">Ver Resolução</button>
+        const btnRes = `<div class="flex justify-between items-center mt-5">
+                            <button onclick="mostrarResolucao('${q.id}', false)" class="text-blue-600 text-sm md:text-base font-bold hover:underline">Ver Resolução</button>
                             ${btnReport}
                         </div>`;
-        const comHtml = `<div id="com-${q.id}" class="hidden mt-4 p-6 bg-blue-50 border border-blue-100 rounded-xl text-justify animate-fade-in"><p class="font-black text-blue-900 mb-2">Gabarito Oficial: ${q.gabarito_letra}</p><p class="text-gray-700 leading-relaxed">${q.comentario}</p></div>`;
+        const comHtml = `<div id="com-${q.id}" class="hidden mt-4 p-5 bg-blue-50 border border-blue-100 rounded-xl text-left animate-fade-in"><p class="font-black text-blue-900 mb-2 text-sm md:text-base">Gabarito Oficial: ${q.gabarito_letra}</p><p class="text-gray-700 leading-relaxed text-sm md:text-base">${q.comentario}</p></div>`;
 
         container.innerHTML += `
-            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-6 relative">
+            <div class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-100 mb-6 relative">
                 ${tag}
-                <div class="text-xs text-gray-400 mb-4 font-bold tracking-widest uppercase">${q.temas_dinamicos.join(' • ')}</div>
-                <p class="text-lg text-justify leading-relaxed font-medium text-gray-800">${q.enunciado}</p>
+                <!-- Diminui os temas no mobile text-[10px] e permite quebrar a linha -->
+                <div class="text-[10px] md:text-xs text-gray-400 mb-3 font-bold tracking-widest uppercase break-words leading-relaxed">${q.temas_dinamicos.join(' • ')}</div>
+                
+                <!-- Enunciado com fonte equilibrada -->
+                <p class="text-base md:text-lg text-left leading-relaxed font-medium text-gray-800">${q.enunciado}</p>
+                
                 ${alts}
                 ${btnRes}
                 ${boxReport}
