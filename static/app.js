@@ -91,6 +91,18 @@ function carregarEstatisticas() {
         }
     }
 }
+// Dentro do app.js
+async function aplicarFiltros(pagina = 1) {
+    // ... codigo existente
+    const mat = document.getElementById('f-mat').value;
+    const aviso = document.getElementById('aviso-aleatorio');
+    
+    // Esconde o aviso se o usuário escolheu uma matéria
+    if (aviso) {
+        if (mat !== "Todos") aviso.classList.add('hidden');
+        else aviso.classList.remove('hidden');
+    }
+}// ... continua o fetch
 
 // Quando a página carrega, ele chama carregarEstatisticas()
 document.addEventListener("DOMContentLoaded", () => {
