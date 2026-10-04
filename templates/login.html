@@ -2,39 +2,34 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <!-- A TAG MÁGICA QUE RESOLVE O PROBLEMA DO MOBILE -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>RESPdi - Autenticação</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .bg-pattern {
-            background-color: #0f172a;
-            background-image: radial-gradient(#1e293b 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
+        .bg-pattern { background-color: #0f172a; background-image: radial-gradient(#1e293b 1px, transparent 1px); background-size: 20px 20px; }
         .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-pattern min-h-screen flex items-center justify-center font-sans text-gray-800">
     
-    <!-- CAIXA PRINCIPAL (Tamanho Fixo para o deslize ser perfeito) -->
-    <div class="bg-white rounded-3xl shadow-2xl w-[420px] h-[520px] relative overflow-hidden animate-fade-in">
+    <!-- CAIXA PRINCIPAL (Agora responsiva: w-full e mx-4 para não colar nas bordas do celular) -->
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 h-[540px] md:h-[520px] relative overflow-hidden animate-fade-in">
         
         <!-- Formulário de Login -->
-        <div id="form-login" class="w-full h-full p-10 flex flex-col justify-center transition-all duration-500 ease-in-out transform translate-x-0 relative">
-            
+        <div id="form-login" class="w-full h-full p-8 md:p-10 flex flex-col justify-center transition-all duration-500 ease-in-out transform translate-x-0 relative">
             <div class="text-center mb-8">
-                <h2 class="text-4xl font-black text-blue-900 tracking-tight mb-2">RESPdi</h2>
+                <h2 class="text-3xl md:text-4xl font-black text-blue-900 tracking-tight mb-2">RESPdi</h2>
                 <p class="text-gray-500 text-sm font-medium">Acesse sua plataforma de estudos</p>
             </div>
             
             <div class="space-y-4">
-                <div>
-                    <input type="text" id="username" placeholder="Usuário" class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-700 font-medium placeholder-gray-400">
-                </div>
-                <div>
-                    <input type="password" id="password" placeholder="Senha" class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-700 font-medium placeholder-gray-400">
-                </div>
-                <button onclick="fazerLogin()" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 mt-2">
+                <!-- text-base previne o zoom automático no iPhone -->
+                <input type="text" id="username" placeholder="Usuário" class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-700 font-medium text-base">
+                <input type="password" id="password" placeholder="Senha" class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-700 font-medium text-base">
+                
+                <button onclick="fazerLogin()" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-all text-base mt-2">
                     Entrar no Sistema
                 </button>
             </div>
@@ -45,15 +40,15 @@
         </div>
 
         <!-- Formulário de Cadastro (Etapa 1) -->
-        <div id="form-cadastro-1" class="w-full h-full p-10 flex flex-col justify-center transition-all duration-500 ease-in-out transform translate-x-full absolute hidden">
+        <div id="form-cadastro-1" class="w-full h-full p-8 md:p-10 flex flex-col justify-center transition-all duration-500 ease-in-out transform translate-x-full absolute hidden">
             <h2 class="text-2xl font-black text-center text-blue-900 mb-2">Criar Conta</h2>
             <p class="text-center text-gray-500 text-sm font-medium mb-8">Etapa 1 de 2</p>
             
             <div class="space-y-4">
-                <input type="text" id="new-user" placeholder="Escolha um Usuário" class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-700 font-medium">
-                <input type="password" id="new-pass" placeholder="Crie uma Senha" class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-700 font-medium">
+                <input type="text" id="new-user" placeholder="Escolha um Usuário" class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-700 font-medium text-base">
+                <input type="password" id="new-pass" placeholder="Crie uma Senha" class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-700 font-medium text-base">
                 
-                <button onclick="alternarTela('form-cadastro-2')" class="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl hover:bg-black hover:shadow-lg transition-all duration-300 mt-2">
+                <button onclick="alternarTela('form-cadastro-2')" class="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl hover:bg-black transition-all mt-2 text-base">
                     Próximo Passo ➔
                 </button>
                 <button onclick="alternarTela('form-login')" class="w-full text-gray-400 text-sm font-medium hover:text-gray-700 transition-colors mt-4">
@@ -63,18 +58,18 @@
         </div>
 
         <!-- Formulário de Cadastro (Etapa 2) -->
-        <div id="form-cadastro-2" class="w-full h-full p-10 flex flex-col justify-center transition-all duration-500 ease-in-out transform translate-x-full absolute hidden">
+        <div id="form-cadastro-2" class="w-full h-full p-8 md:p-10 flex flex-col justify-center transition-all duration-500 ease-in-out transform translate-x-full absolute hidden">
             <h2 class="text-2xl font-black text-center text-blue-900 mb-2">Sobre Você</h2>
-            <p class="text-center text-gray-500 text-sm font-medium mb-6">Etapa 2 de 2</p>
+            <p class="text-center text-gray-500 text-sm font-medium mb-4">Etapa 2 de 2</p>
             
-            <div class="space-y-3 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 tag-check" value="PET UFRN"> <span class="text-sm font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">Faço parte do PET UFRN</span></label>
-                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 tag-check" value="IFMSA Brasil"> <span class="text-sm font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">Faço parte da IFMSA Brasil</span></label>
-                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 tag-check" value="PET Clima"> <span class="text-sm font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">Faço parte do PET Clima</span></label>
-                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 tag-check" value="Não sou PF"> <span class="text-sm font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">Não sou da PF</span></label>
+            <div class="space-y-3 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded tag-check" value="PET UFRN"> <span class="text-sm md:text-base font-semibold text-gray-600">Faço parte do PET UFRN</span></label>
+                <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded tag-check" value="IFMSA Brasil"> <span class="text-sm md:text-base font-semibold text-gray-600">Faço parte da IFMSA Brasil</span></label>
+                <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded tag-check" value="PET Clima"> <span class="text-sm md:text-base font-semibold text-gray-600">Faço parte do PET Clima</span></label>
+                <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded tag-check" value="Não sou PF"> <span class="text-sm md:text-base font-semibold text-gray-600">Não sou da PF</span></label>
             </div>
             
-            <button onclick="enviarCadastro()" class="w-full bg-green-500 text-white font-bold py-3.5 rounded-xl hover:bg-green-600 hover:shadow-lg transition-all duration-300">
+            <button onclick="enviarCadastro()" class="w-full bg-green-500 text-white font-bold py-3.5 rounded-xl hover:bg-green-600 transition-all text-base">
                 Solicitar Aprovação
             </button>
             <button onclick="alternarTela('form-cadastro-1')" class="w-full text-gray-400 text-sm font-medium hover:text-gray-700 transition-colors mt-4">
@@ -84,14 +79,8 @@
 
     </div>
 
-    <!-- Importa o motor JavaScript e força a atualização do cache -->
-    <script src="/static/app.js?v=2026"></script>
-    
-    <!-- Permite fazer login apertando ENTER -->
-    <script>
-        document.getElementById('password').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') fazerLogin();
-        });
-    </script>
+    <!-- Atualize a versão do app.js para limpar o cache -->
+    <script src="/static/app.js?v=2028"></script>
+    <script> document.getElementById('password').addEventListener('keypress', function(e){ if(e.key === 'Enter') fazerLogin(); }); </script>
 </body>
 </html>
