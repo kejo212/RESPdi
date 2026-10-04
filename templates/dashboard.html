@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -8,9 +7,13 @@
     <style>
         .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        /* Scrollbar elegante para o terminal */
+        .terminal-scroll::-webkit-scrollbar { width: 8px; }
+        .terminal-scroll::-webkit-scrollbar-track { background: #111827; }
+        .terminal-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-gray-50 font-sans text-gray-800">
+<body class="bg-gray-50 font-sans text-gray-800 pb-20">
     {% include 'sidebar.html' %}
     
     <div class="pl-28 pt-10 pr-10 max-w-6xl animate-fade-in-up">
@@ -18,15 +21,15 @@
         <p class="text-gray-500 mb-8">Acompanhe seu desempenho e inicie seus estudos.</p>
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Resolvido</p>
                 <p class="text-4xl font-black mt-2 text-gray-800" id="stat-total">0</p>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-green-100 hover:shadow-md transition-shadow">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-green-100">
                 <p class="text-xs font-bold text-green-500 uppercase tracking-wider">Acertos</p>
                 <p class="text-4xl font-black mt-2 text-green-600" id="stat-acertos">0</p>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-red-100 hover:shadow-md transition-shadow">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-red-100">
                 <p class="text-xs font-bold text-red-500 uppercase tracking-wider">Erros</p>
                 <p class="text-4xl font-black mt-2 text-red-600" id="stat-erros">0</p>
             </div>
@@ -36,28 +39,39 @@
             Iniciar Simulado <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
         </button>
 
-        <!-- Sessão Exclusiva: Painel de Aprovação (Visível apenas para Davi) -->
-        <div id="admin-panel" class="hidden mt-12 bg-white p-8 rounded-2xl shadow-lg border-t-4 border-blue-900 animate-fade-in-up">
-            <h2 class="text-2xl font-black text-gray-900 mb-2 flex items-center gap-2">
-                <svg class="w-6 h-6 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                Painel do Administrador
-            </h2>
-            <p class="text-sm text-gray-500 mb-6">Aprove ou negue o acesso de novos usuários.</p>
-            <div id="lista-pendentes" class="space-y-4">
-                <!-- Javascript injeta os cards aqui -->
+        <!-- SESSÃO EXCLUSIVA DO DAVI (Fica oculta para outros) -->
+        <div id="admin-panel" class="hidden mt-16 space-y-8 animate-fade-in-up border-t pt-8">
+            <h1 class="text-3xl font-black text-blue-900 mb-2 flex items-center gap-3">
+                <svg class="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                Módulo de Administração Central
+            </h1>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Painel de Aprovação -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-blue-100">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex justify-between items-center">
+                        Novos Cadastros
+                        <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full" id="contador-pendentes">0 na fila</span>
+                    </h2>
+                    <div id="lista-pendentes" class="space-y-3 max-h-80 overflow-y-auto pr-2">
+                        <!-- Injetado via JS -->
+                    </div>
+                </div>
+
+                <!-- Console de Logs (Terminal) -->
+                <div class="bg-gray-900 p-6 rounded-2xl shadow-lg border border-gray-800 flex flex-col">
+                    <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        Terminal do Servidor
+                    </h2>
+                    <div id="server-logs" class="bg-black text-green-400 font-mono text-sm p-4 rounded-xl flex-1 h-80 overflow-y-auto terminal-scroll leading-relaxed">
+                        <div class="text-gray-500 animate-pulse">Conectando ao núcleo do servidor...</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="/static/app.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            carregarEstatisticas();
-            if (localStorage.getItem('currentUser') === 'davi') {
-                document.getElementById('admin-panel').classList.remove('hidden');
-                carregarPendentes();
-            }
-        });
-    </script>
 </body>
 </html>
