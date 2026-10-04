@@ -7,7 +7,6 @@
     <style>
         .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        /* Scrollbar elegante para o terminal */
         .terminal-scroll::-webkit-scrollbar { width: 8px; }
         .terminal-scroll::-webkit-scrollbar-track { background: #111827; }
         .terminal-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
@@ -16,10 +15,11 @@
 <body class="bg-gray-50 font-sans text-gray-800 pb-20">
     {% include 'sidebar.html' %}
     
-    <div class="pl-28 pt-10 pr-10 max-w-6xl animate-fade-in-up">
+    <div class="pl-28 pt-10 pr-10 max-w-6xl animate-fade-in-up mx-auto">
         <h1 class="text-4xl font-black text-gray-900 mb-2">Visão Geral</h1>
-        <p class="text-gray-500 mb-8">Acompanhe seu desempenho e inicie seus estudos.</p>
+        <p class="text-gray-500 mb-8">Acompanhe seu desempenho e acesse seus materiais.</p>
         
+        <!-- Estatísticas Globais -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Resolvido</p>
@@ -35,43 +35,62 @@
             </div>
         </div>
 
-        <button onclick="window.location.href='/questoes'" class="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-blue-700 hover:shadow-lg transition-all duration-300 w-full md:w-auto flex items-center gap-2">
+        <!-- DRIVE COMPARTILHADO (Visível para TODOS) -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-10">
+            <h2 class="text-2xl font-black text-gray-800 mb-1 flex items-center gap-2">
+                <svg class="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 3.8l6.4 12.7H5.6L12 5.8z"/></svg> 
+                Materiais de Estudo (Drive)
+            </h2>
+            <p class="text-sm text-gray-500 mb-4">Arquivos de apoio, resumos e bibliografia complementar da plataforma.</p>
+            <div class="w-full bg-gray-100 rounded-xl overflow-hidden border border-gray-200" style="height: 400px;">
+                <!-- TROQUE O ID AQUI EMBAIXO PELO ID DA SUA PASTA -->
+                <iframe src="https://drive.google.com/embeddedfolderview?id=13tBBSrXMsu2NGW0jCSvrzIE9epV-Bw47#grid" width="100%" height="100%" frameborder="0" scrolling="no"></iframe>
+            </div>
+        </div>
+
+        <button onclick="window.location.href='/questoes'" class="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-blue-700 hover:shadow-lg transition-all duration-300 w-full md:w-auto flex items-center justify-center gap-2 mb-10">
             Iniciar Simulado <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
         </button>
 
-        <!-- SESSÃO EXCLUSIVA DO DAVI (Fica oculta para outros) -->
-        <div id="admin-panel" class="hidden mt-16 space-y-8 animate-fade-in-up border-t pt-8">
+        <!-- SESSÃO EXCLUSIVA DO DAVI (Módulo de Administração Central) -->
+        <div id="admin-panel" class="hidden space-y-8 border-t pt-10">
             <h1 class="text-3xl font-black text-blue-900 mb-2 flex items-center gap-3">
                 <svg class="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
                 Módulo de Administração Central
             </h1>
             
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Painel de Aprovação -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- 1. Painel de Aprovação (Pendentes) -->
                 <div class="bg-white p-6 rounded-2xl shadow-lg border border-blue-100">
                     <h2 class="text-xl font-bold text-gray-800 mb-4 flex justify-between items-center">
-                        Novos Cadastros
-                        <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full" id="contador-pendentes">0 na fila</span>
+                        Aprovações
+                        <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-bold" id="contador-pendentes">0 na fila</span>
                     </h2>
-                    <div id="lista-pendentes" class="space-y-3 max-h-80 overflow-y-auto pr-2">
-                        <!-- Injetado via JS -->
-                    </div>
+                    <div id="lista-pendentes" class="space-y-3 max-h-80 overflow-y-auto pr-2"></div>
                 </div>
 
-                <!-- Console de Logs (Terminal) -->
-                <div class="bg-gray-900 p-6 rounded-2xl shadow-lg border border-gray-800 flex flex-col">
+                <!-- 2. Gestão de Usuários (Bloquear/Desbloquear) -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-orange-100">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex justify-between items-center">
+                        Usuários Ativos
+                        <span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full font-bold">Gestão</span>
+                    </h2>
+                    <div id="lista-ativos" class="space-y-3 max-h-80 overflow-y-auto pr-2"></div>
+                </div>
+
+                <!-- 3. Console de Logs -->
+                <div class="bg-gray-900 p-6 rounded-2xl shadow-lg border border-gray-800 flex flex-col h-96 lg:h-auto">
                     <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
                         <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        Terminal do Servidor
+                        Logs do Servidor
                     </h2>
-                    <div id="server-logs" class="bg-black text-green-400 font-mono text-sm p-4 rounded-xl flex-1 h-80 overflow-y-auto terminal-scroll leading-relaxed">
-                        <div class="text-gray-500 animate-pulse">Conectando ao núcleo do servidor...</div>
-                    </div>
+                    <div id="server-logs" class="bg-black text-green-400 font-mono text-sm p-4 rounded-xl flex-1 overflow-y-auto terminal-scroll leading-relaxed"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=2027"></script>
 </body>
 </html>
