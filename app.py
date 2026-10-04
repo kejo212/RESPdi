@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_from_directory
 import json, glob, os, random
 from datetime import datetime
 
@@ -31,8 +31,7 @@ for caminho_arquivo in arquivos_json:
     nome = os.path.basename(caminho_arquivo)
     try:
         with open(caminho_arquivo, 'r', encoding='utf-8') as f:
-            dados = json.load(f)
-            banco_questoes.extend(dados)
+            banco_questoes.extend(json.load(f))
             registrar_log(f"[OK] {nome} lido (UTF-8).")
     except UnicodeDecodeError:
         try:
@@ -63,7 +62,7 @@ def salvar_usuarios(db):
     with open(ARQUIVO_USUARIOS, 'w') as f: json.dump(db, f, indent=4)
 
 # ==========================================
-# 4. ROTAS DAS PÁGINAS HTML (FRONTEND)
+# 4. ROTAS DAS PÁGINAS HTML E GOOGLE SEARCH CONSOLE
 # ==========================================
 @app.route('/')
 def route_login(): return render_template('login.html')
@@ -73,6 +72,13 @@ def route_dashboard(): return render_template('dashboard.html')
 def route_questoes(): return render_template('questoes.html')
 @app.route('/perfil')
 def route_perfil(): return render_template('perfil.html')
+
+# Rota dinâmica para liberar exclusivamente o arquivo do Google
+@app.route('/<path:filename>')
+def serve_google_verification(filename):
+    if filename.startswith('google') and filename.endswith('.html'):
+        return send_from_directory(BASE_DIR, filename)
+    return "Página não encontrada", 404
 
 # ==========================================
 # 5. APIs DE AUTENTICAÇÃO E TRIBUNAL DO DAVI
@@ -101,20 +107,16 @@ def cadastro():
     registrar_log(f"Novo cadastro pendente: {user}")
     return jsonify({"sucesso": True})
 
-# ADMIN: Pendentes
 @app.route('/api/admin/pendentes', methods=['GET'])
 def listar_pendentes():
     return jsonify({k: v for k, v in carregar_usuarios().items() if v['status'] == 'pendente'})
 
-# ADMIN: Ativos/Bloqueados (Novo)
 @app.route('/api/admin/usuarios_ativos', methods=['GET'])
 def listar_usuarios_ativos():
     db = carregar_usuarios()
-    # Retorna todos exceto o Davi e os pendentes
     ativos = {k: v for k, v in db.items() if k != 'davi' and v['status'] != 'pendente'}
     return jsonify(ativos)
 
-# ADMIN: Resolver Status (Serve para aprovar novos e bloquear velhos)
 @app.route('/api/admin/resolver', methods=['POST'])
 def resolver_pendencia():
     dados = request.json
@@ -193,7 +195,6 @@ def obter_questoes():
         return jsonify({"total": len(filtradas), "questoes": filtradas[inicio : inicio + por_pagina]})
     except Exception as e: return jsonify({"erro_interno": str(e)})
 
-# NOVO: Salva os erros em um JSON
 @app.route('/api/reportar', methods=['POST'])
 def reportar():
     dados = request.json or {}
@@ -201,12 +202,7 @@ def reportar():
     motivo = dados.get('motivo', 'Sem motivo')
     user = dados.get('usuario', 'visitante')
 
-    novo_reporte = {
-        "id_questao": id_q,
-        "erro": motivo,
-        "usuario": user,
-        "data": datetime.now().strftime("%d/%m/%Y %H:%M")
-    }
+    novo_reporte = { "id_questao": id_q, "erro": motivo, "usuario": user, "data": datetime.now().strftime("%d/%m/%Y %H:%M") }
 
     reportes = []
     if os.path.exists(ARQUIVO_REPORTES):
