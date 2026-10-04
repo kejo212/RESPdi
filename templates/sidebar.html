@@ -1,27 +1,28 @@
-
-<aside class="w-20 bg-gray-900 h-screen fixed left-0 top-0 flex flex-col items-center py-8 gap-8 z-50 shadow-2xl border-r border-gray-800">
-    <!-- Logo Símbolo -->
-    <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/30 mb-4 cursor-pointer hover:scale-110 transition-transform duration-300" onclick="window.location.href='/dashboard'">
+<!-- Barra Lateral (Desktop) / Barra Inferior (Mobile) -->
+<div class="fixed bottom-0 left-0 w-full md:w-20 h-16 md:h-screen bg-gray-900 shadow-2xl flex md:flex-col items-center justify-around md:justify-start md:py-8 z-50 transition-all duration-300">
+    
+    <!-- Logo (Escondida no mobile para poupar espaço) -->
+    <div class="hidden md:flex bg-blue-600 text-white w-12 h-12 rounded-xl items-center justify-center font-black text-xl mb-12 shadow-lg">
         R
     </div>
-    
-    <!-- Ícone Home -->
-    <a href="/dashboard" class="group flex flex-col items-center text-gray-400 hover:text-blue-400 transition-all hover:scale-110 duration-300">
-        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-        <span class="text-[10px] opacity-0 group-hover:opacity-100 mt-1 font-medium transition-opacity">Início</span>
+
+    <!-- Link: Dashboard -->
+    <a href="/dashboard" class="flex flex-col items-center text-gray-400 hover:text-white group md:mb-8 p-2 md:p-0">
+        <svg class="w-6 h-6 md:w-7 md:h-7 mb-1 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+        <span class="text-[10px] md:hidden font-medium">Início</span>
     </a>
 
-    <!-- Ícone Questões -->
-    <a href="/questoes" class="group flex flex-col items-center text-gray-400 hover:text-blue-400 transition-all hover:scale-110 duration-300">
-        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-        <span class="text-[10px] opacity-0 group-hover:opacity-100 mt-1 font-medium transition-opacity">Questões</span>
+    <!-- Link: Questões -->
+    <a href="/questoes" class="flex flex-col items-center text-gray-400 hover:text-white group md:mb-8 p-2 md:p-0">
+        <svg class="w-6 h-6 md:w-7 md:h-7 mb-1 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+        <span class="text-[10px] md:hidden font-medium">Questões</span>
     </a>
 
-    <!-- Ícone Perfil -->
-    <a href="/perfil" class="group flex flex-col items-center text-gray-400 hover:text-blue-400 transition-all hover:scale-110 duration-300 mt-auto">
-        <div class="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center text-white font-bold text-sm border-2 border-transparent group-hover:border-blue-400" id="sidebar-avatar">
+    <!-- Avatar do Usuário -->
+    <a href="/perfil" class="md:mt-auto flex flex-col items-center group p-2 md:p-0">
+        <div id="sidebar-avatar" class="w-7 h-7 md:w-10 md:h-10 rounded-full bg-gray-700 text-white flex items-center justify-center font-bold text-xs md:text-base border-2 border-gray-600 group-hover:border-blue-500 transition-colors">
             U
         </div>
-        <span class="text-[10px] opacity-0 group-hover:opacity-100 mt-1 font-medium transition-opacity">Perfil</span>
+        <span class="text-[10px] md:hidden text-gray-400 mt-1 font-medium">Perfil</span>
     </a>
-</aside>
+</div>
