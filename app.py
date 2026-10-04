@@ -93,92 +93,87 @@ def salvar_usuarios(db):
         json.dump(db, f, indent=4)
 
 # ==========================================
-# 5. ROTAS HTML E APIs
+# 5. APIs DE QUESTÕES E MOTOR DO SIMULADOR (BLINDADO)
 # ==========================================
-@app.route('/')
-def route_login(): return render_template('login.html')
-@app.route('/dashboard')
-def route_dashboard(): return render_template('dashboard.html')
-@app.route('/questoes')
-def route_questoes(): return render_template('questoes.html')
-@app.route('/perfil')
-def route_perfil(): return render_template('perfil.html')
-
-@app.route('/api/login', methods=['POST'])
-def login():
-    dados = request.json
-    db = carregar_usuarios()
-    user = dados.get('username')
-    if user in db and db[user]['senha'] == dados.get('password'):
-        if db[user]['status'] == 'pendente': return jsonify({"erro": "Seu cadastro ainda está em análise pelo Davi."}), 403
-        if db[user]['status'] == 'negado': return jsonify({"erro": "Seu cadastro foi negado pelo administrador."}), 403
-        registrar_log(f"Login efetuado: {user}")
-        return jsonify({"sucesso": True, "admin": user == 'davi'})
-    return jsonify({"erro": "Usuário ou senha incorretos."}), 401
-
-@app.route('/api/cadastro', methods=['POST'])
-def cadastro():
-    dados = request.json
-    db = carregar_usuarios()
-    user = dados.get('username')
-    if user in db: return jsonify({"erro": "Este nome de usuário já existe."}), 400
-    db[user] = {"senha": dados.get('password'), "status": "pendente", "tags": dados.get('tags', [])}
-    salvar_usuarios(db)
-    registrar_log(f"Novo cadastro pendente: {user}")
-    return jsonify({"sucesso": True})
-
-@app.route('/api/admin/pendentes', methods=['GET'])
-def listar_pendentes():
-    return jsonify({k: v for k, v in carregar_usuarios().items() if v['status'] == 'pendente'})
-
-@app.route('/api/admin/resolver', methods=['POST'])
-def resolver_pendencia():
-    dados = request.json
-    db = carregar_usuarios()
-    user = dados.get('username')
-    if user in db:
-        db[user]['status'] = dados.get('acao')
-        salvar_usuarios(db)
-        registrar_log(f"Usuário {user} foi {dados.get('acao')} por Davi.")
-        return jsonify({"sucesso": True})
-    return jsonify({"erro": "Usuário não encontrado"}), 404
-
-@app.route('/api/admin/logs', methods=['GET'])
-def obter_logs():
-    return jsonify(sys_logs)
-
 @app.route('/api/categorias', methods=['GET'])
 def obter_categorias():
-    categorias = {}
-    for q in banco_questoes:
-        t = q.get('temas_dinamicos', ['Geral', 'Geral', 'Geral'])
-        m, a, s = t[0], (t[1] if len(t)>1 else "Geral"), (t[2] if len(t)>2 else "Geral")
-        if m not in categorias: categorias[m] = {"count": 0, "assuntos": {}}
-        categorias[m]["count"] += 1
-        if a not in categorias[m]["assuntos"]: categorias[m]["assuntos"][a] = {"count": 0, "subs": {}}
-        categorias[m]["assuntos"][a]["count"] += 1
-        if s not in categorias[m]["assuntos"][a]["subs"]: categorias[m]["assuntos"][a]["subs"][s] = 0
-        categorias[m]["assuntos"][a]["subs"][s] += 1
-    return jsonify(categorias)
+    try:
+        categorias = {}
+        for q in banco_questoes:
+            # 1. Proteção contra dados sujos nos temas
+            t = q.get('temas_dinamicos')
+            if not isinstance(t, list): 
+                t = ['Geral', 'Geral', 'Geral']
+            
+            # Se a questão só tiver 1 tema, preenche o resto para não travar
+            while len(t) < 3: 
+                t.append('Geral')
+                
+            m, a, s = str(t[0]), str(t[1]), str(t[2])
+            
+            if m not in categorias: categorias[m] = {"count": 0, "assuntos": {}}
+            categorias[m]["count"] += 1
+            
+            if a not in categorias[m]["assuntos"]: categorias[m]["assuntos"][a] = {"count": 0, "subs": {}}
+            categorias[m]["assuntos"][a]["count"] += 1
+            
+            if s not in categorias[m]["assuntos"][a]["subs"]: categorias[m]["assuntos"][a]["subs"][s] = 0
+            categorias[m]["assuntos"][a]["subs"][s] += 1
+            
+        return jsonify(categorias)
+    except Exception as e:
+        registrar_log(f"[ERRO API CATEGORIAS] {str(e)}")
+        return jsonify({"erro": str(e)}), 500
 
 @app.route('/api/questoes', methods=['POST'])
 def obter_questoes():
-    f = request.json
-    pagina, por_pagina = f.get('pagina', 1), f.get('limite', 20)
-    mat, ass, sub = f.get('materia', 'Todos'), f.get('assunto', 'Todos'), f.get('subassunto', 'Todos')
-    filtradas = []
-    for q in banco_questoes:
-        t = q.get('temas_dinamicos', ['Geral', 'Geral', 'Geral'])
-        if mat != 'Todos' and t[0] != mat: continue
-        if ass != 'Todos' and (len(t) < 2 or t[1] != ass): continue
-        if sub != 'Todos' and (len(t) < 3 or t[2] != sub): continue
-        filtradas.append(q)
-    return jsonify({"total": len(filtradas), "questoes": filtradas[(pagina-1)*por_pagina : pagina*por_pagina]})
+    try:
+        # 2. Proteção contra falta de dados no envio do navegador
+        f = request.json or {}
+        pagina = int(f.get('pagina', 1))
+        por_pagina = int(f.get('limite', 20))
+        
+        mat = str(f.get('materia', 'Todos'))
+        ass = str(f.get('assunto', 'Todos'))
+        sub = str(f.get('subassunto', 'Todos'))
+        
+        filtradas = []
+        
+        for q in banco_questoes:
+            t = q.get('temas_dinamicos')
+            if not isinstance(t, list): t = ['Geral', 'Geral', 'Geral']
+            while len(t) < 3: t.append('Geral')
+            
+            m, a, s = str(t[0]), str(t[1]), str(t[2])
+            
+            if mat != 'Todos' and m != mat: continue
+            if ass != 'Todos' and a != ass: continue
+            if sub != 'Todos' and s != sub: continue
+            
+            # 3. Empacota a questão com garantia de que nada vai quebrar o Javascript
+            q_segura = {
+                "id": str(q.get("id", "sem-id")),
+                "temas_dinamicos": [m, a, s],
+                "enunciado": str(q.get("enunciado", "Questão com enunciado em branco.")),
+                "alternativas": q.get("alternativas") if isinstance(q.get("alternativas"), list) else [],
+                "gabarito_letra": str(q.get("gabarito_letra", "A")),
+                "comentario": str(q.get("comentario", "Sem comentários do professor."))
+            }
+            filtradas.append(q_segura)
+
+        inicio = (pagina - 1) * por_pagina
+        return jsonify({
+            "total": len(filtradas),
+            "questoes": filtradas[inicio : inicio + por_pagina]
+        })
+    except Exception as e:
+        registrar_log(f"[ERRO API QUESTOES] {str(e)}")
+        return jsonify({"erro": str(e)}), 500
 
 @app.route('/api/reportar', methods=['POST'])
 def reportar():
-    dados = request.json
-    registrar_log(f"ALERTA: Questão {dados.get('id')} reportada ({dados.get('motivo')})")
+    dados = request.json or {}
+    registrar_log(f"ALERTA: Questão {dados.get('id', 'Desconhecida')} reportada ({dados.get('motivo', 'Sem motivo')})")
     return jsonify({"sucesso": True})
 
 if __name__ == '__main__':
