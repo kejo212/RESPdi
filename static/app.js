@@ -1,5 +1,5 @@
 // ==========================================
-// 1. VARIÁVEIS GLOBAIS (BLINDADAS)
+// 1. VARIÁVEIS GLOBAIS
 // ==========================================
 let currentUser = localStorage.getItem('currentUser') || 'visitante';
 let progressoUsuario = {};
@@ -121,14 +121,13 @@ async function carregarLogsServidor() {
 }
 
 // ==========================================
-// 4. MOTOR DE QUESTÕES E FILTROS
+// 4. MOTOR DE QUESTÕES E FEEDBACK VISUAL
 // ==========================================
 let categoriasDB = {};
 async function carregarFiltros() {
     try {
         const res = await fetch('/api/categorias');
         categoriasDB = await res.json();
-        
         const sMat = document.getElementById('f-mat');
         if(!sMat) return;
 
@@ -143,12 +142,9 @@ async function carregarFiltros() {
             sAss.innerHTML = '<option value="Todos">Todos os Conteúdos</option>';
             sSub.innerHTML = '<option value="Todos">Todos os Assuntos</option>';
             sSub.disabled = true;
-
             if (sMat.value !== "Todos") {
                 const assData = categoriasDB[sMat.value].assuntos;
-                Object.keys(assData).sort().forEach(a => {
-                    sAss.innerHTML += `<option value="${a}">${a} (${assData[a].count})</option>`;
-                });
+                Object.keys(assData).sort().forEach(a => { sAss.innerHTML += `<option value="${a}">${a} (${assData[a].count})</option>`; });
                 sAss.disabled = false;
             }
         });
@@ -158,12 +154,9 @@ async function carregarFiltros() {
             const sAss = document.getElementById('f-ass').value;
             const sSub = document.getElementById('f-sub');
             sSub.innerHTML = '<option value="Todos">Todos os Assuntos</option>';
-            
             if (sAss !== "Todos") {
                 const subData = categoriasDB[sMat].assuntos[sAss].subs;
-                Object.keys(subData).sort().forEach(s => {
-                    sSub.innerHTML += `<option value="${s}">${s} (${subData[s]})</option>`;
-                });
+                Object.keys(subData).sort().forEach(s => { sSub.innerHTML += `<option value="${s}">${s} (${subData[s]})</option>`; });
                 sSub.disabled = false;
             }
         });
@@ -175,12 +168,8 @@ async function aplicarFiltros(pagina = 1) {
     const limit = document.getElementById('limite-pagina') ? document.getElementById('limite-pagina').value : 20;
     const mat = document.getElementById('f-mat') ? document.getElementById('f-mat').value : "Todos";
     
-    // Controle do aviso Aleatório
     const aviso = document.getElementById('aviso-aleatorio');
-    if (aviso) {
-        if (mat !== "Todos") aviso.classList.add('hidden');
-        else aviso.classList.remove('hidden');
-    }
+    if (aviso) { (mat !== "Todos") ? aviso.classList.add('hidden') : aviso.classList.remove('hidden'); }
 
     const payload = {
         pagina: paginaAtual,
@@ -212,21 +201,46 @@ function renderizarQuestoesUI(questoes) {
     questoes.forEach((q, idx) => {
         const status = progressoUsuario[q.id];
         let tag = '';
-        if (status) {
+        let mostrarEtiqueta = false;
+
+        // Regra de 1 hora (3.600.000 ms) para a etiqueta flutuante
+        if (status && status.timestamp) {
+            const horasPassadas = (Date.now() - status.timestamp) / 3600000;
+            if (horasPassadas >= 1) mostrarEtiqueta = true;
+        }
+
+        if (mostrarEtiqueta) {
             const cor = status.acertou ? 'bg-green-500' : 'bg-red-500';
             const texto = status.acertou ? 'Respondida Corretamente' : 'Respondida Incorretamente';
-            tag = `<div class="absolute -top-3 right-10 ${cor} text-white px-4 py-1 rounded-full text-xs font-bold shadow-lg">${texto}</div>`;
+            tag = `<div class="absolute -top-3 right-10 ${cor} text-white px-4 py-1 rounded-full text-xs font-bold shadow-lg animate-fade-in">${texto}</div>`;
         }
 
         let alts = `<div class="mt-6 space-y-3" id="alts-${q.id}">`;
         q.alternativas.forEach(alt => {
             const letra = alt.charAt(0);
-            alts += `<button ${status ? 'disabled' : ''} onclick="responder('${q.id}', '${letra}', '${q.gabarito_letra}')" class="w-full text-justify p-4 border border-gray-200 bg-gray-50 rounded-xl transition-all ${status ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-300 hover:bg-white'}">${alt}</button>`;
+            let btnClasses = "w-full text-justify p-4 border rounded-xl transition-all duration-300 ";
+            
+            // Lógica para colorir caso a questão já esteja respondida no cache
+            if (status) {
+                btnClasses += "cursor-not-allowed opacity-80 ";
+                if (letra === q.gabarito_letra) {
+                    btnClasses += "bg-green-50 border-green-400 text-green-900 font-bold "; // A correta
+                } else if (!status.acertou && status.escolhida === letra) {
+                    btnClasses += "bg-red-50 border-red-300 text-red-900 "; // A errada que ele clicou
+                } else {
+                    btnClasses += "bg-gray-50 border-gray-200 text-gray-500 "; // As outras
+                }
+            } else {
+                btnClasses += "bg-gray-50 border-gray-200 hover:border-blue-300 hover:bg-white text-gray-700 ";
+            }
+
+            alts += `<button id="btn-${q.id}-${letra}" ${status ? 'disabled' : ''} onclick="responderMestre('${q.id}', '${letra}', '${q.gabarito_letra}')" class="${btnClasses}">${alt}</button>`;
         });
         alts += `</div>`;
 
-        const btnRes = `<button onclick="mostrarResolucao('${q.id}')" class="mt-4 text-blue-600 font-bold hover:underline flex items-center gap-2">Ver Resolução</button>`;
-        const comHtml = `<div id="com-${q.id}" class="hidden mt-6 p-6 bg-blue-50 border border-blue-100 rounded-xl text-justify"><p class="font-black text-blue-900 mb-2">Gabarito: ${q.gabarito_letra}</p><p class="text-gray-700">${q.comentario}</p></div>`;
+        // Se já estava respondida, o comentário pode ficar visível mas ocultaremos para não poluir
+        const btnRes = `<button onclick="mostrarResolucao('${q.id}', false)" class="mt-4 text-blue-600 font-bold hover:underline flex items-center gap-2">Ver Resolução</button>`;
+        const comHtml = `<div id="com-${q.id}" class="hidden mt-6 p-6 bg-blue-50 border border-blue-100 rounded-xl text-justify animate-fade-in"><p class="font-black text-blue-900 mb-2">Gabarito Oficial: ${q.gabarito_letra}</p><p class="text-gray-700 leading-relaxed">${q.comentario}</p></div>`;
 
         container.innerHTML += `
             <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-6 relative">
@@ -241,20 +255,77 @@ function renderizarQuestoesUI(questoes) {
     });
 }
 
-function responder(id, escolhida, correta) {
-    progressoUsuario[id] = { acertou: escolhida === correta };
+// NOVA FUNÇÃO: Responde instantaneamente sem piscar a tela
+function responderMestre(id, escolhida, correta) {
+    // 1. Salva o progresso com a hora exata
+    progressoUsuario[id] = { 
+        acertou: (escolhida === correta), 
+        escolhida: escolhida,
+        timestamp: Date.now() 
+    };
     localStorage.setItem(`progresso_${currentUser}`, JSON.stringify(progressoUsuario));
-    aplicarFiltros(paginaAtual);
+    
+    // 2. Trava os botões e aplica as cores em tempo real
+    const container = document.getElementById(`alts-${id}`);
+    const botoes = container.getElementsByTagName('button');
+    
+    for (let btn of botoes) {
+        btn.disabled = true;
+        btn.classList.add('cursor-not-allowed', 'opacity-80');
+        btn.classList.remove('hover:border-blue-300', 'hover:bg-white', 'text-gray-700');
+        
+        const letraBtn = btn.id.split('-').pop(); // Descobre qual letra é este botão
+        
+        if (letraBtn === correta) {
+            // Pinta a alternativa correta de verde clarinho
+            btn.classList.add('bg-green-50', 'border-green-400', 'text-green-900', 'font-bold');
+            btn.classList.remove('bg-gray-50', 'border-gray-200');
+        } else if (letraBtn === escolhida && escolhida !== correta) {
+            // Pinta a alternativa que você errou de vermelho clarinho
+            btn.classList.add('bg-red-50', 'border-red-300', 'text-red-900');
+            btn.classList.remove('bg-gray-50', 'border-gray-200');
+        } else {
+            btn.classList.add('text-gray-500'); // Deixa o resto meio apagado
+        }
+    }
+    
+    // 3. Abre a resolução automaticamente
+    mostrarResolucao(id, true);
+    
+    // 4. Atualiza os números no topo (sem recarregar)
+    atualizarNumerosEstatisticas();
 }
 
-function mostrarResolucao(id) {
-    document.getElementById(`com-${id}`).classList.remove('hidden');
-    if (!progressoUsuario[id]) {
-        progressoUsuario[id] = { acertou: false }; 
+function mostrarResolucao(id, autoAberta = false) {
+    const boxComentario = document.getElementById(`com-${id}`);
+    if (boxComentario) boxComentario.classList.remove('hidden');
+    
+    // Se ele clicou direto em "Ver Resolução" sem responder, marca como erro
+    if (!autoAberta && !progressoUsuario[id]) {
+        progressoUsuario[id] = { acertou: false, escolhida: '-', timestamp: Date.now() }; 
         localStorage.setItem(`progresso_${currentUser}`, JSON.stringify(progressoUsuario));
-        const botoes = document.getElementById(`alts-${id}`).children;
-        for (let b of botoes) { b.disabled = true; b.classList.add('opacity-50', 'cursor-not-allowed'); }
+        
+        const container = document.getElementById(`alts-${id}`);
+        if(container) {
+            const botoes = container.getElementsByTagName('button');
+            for (let btn of botoes) { 
+                btn.disabled = true; 
+                btn.classList.add('opacity-50', 'cursor-not-allowed'); 
+                btn.classList.remove('hover:border-blue-300', 'hover:bg-white');
+            }
+        }
+        atualizarNumerosEstatisticas();
     }
+}
+
+function atualizarNumerosEstatisticas() {
+    const ids = Object.keys(progressoUsuario);
+    let acertos = 0;
+    ids.forEach(id => { if (progressoUsuario[id].acertou) acertos++; });
+    
+    if(document.getElementById('stat-total')) document.getElementById('stat-total').innerText = ids.length;
+    if(document.getElementById('stat-acertos')) document.getElementById('stat-acertos').innerText = acertos;
+    if(document.getElementById('stat-erros')) document.getElementById('stat-erros').innerText = ids.length - acertos;
 }
 
 function renderizarPaginacaoUI(total, limit) {
@@ -264,22 +335,22 @@ function renderizarPaginacaoUI(total, limit) {
     const totalPags = Math.ceil(total / limit);
     if (totalPags <= 1) return;
 
-    if (paginaAtual > 1) container.innerHTML += `<button onclick="aplicarFiltros(${paginaAtual - 1})" class="p-2 border rounded">«</button>`;
+    if (paginaAtual > 1) container.innerHTML += `<button onclick="aplicarFiltros(${paginaAtual - 1})" class="p-2 border rounded hover:bg-gray-50 transition">«</button>`;
     
     let mostrouUltima = false;
     for (let i = 1; i <= totalPags; i++) {
         if (i <= 3 || i === paginaAtual || i === paginaAtual - 1 || i === paginaAtual + 1) {
-            const active = (i === paginaAtual) ? 'bg-blue-600 text-white' : 'bg-white';
-            container.innerHTML += `<button onclick="aplicarFiltros(${i})" class="p-2 border rounded ${active}">${i}</button>`;
+            const active = (i === paginaAtual) ? 'bg-blue-600 text-white font-bold' : 'bg-white hover:bg-gray-50';
+            container.innerHTML += `<button onclick="aplicarFiltros(${i})" class="p-2 border rounded transition ${active}">${i}</button>`;
         } else if (i === 4 && paginaAtual < 3) {
-            container.innerHTML += `<span class="px-2">...</span>`; mostrouUltima = true; break;
+            container.innerHTML += `<span class="px-2 text-gray-400">...</span>`; mostrouUltima = true; break;
         } else if (i > paginaAtual + 1 && i < totalPags) {
-            if (!mostrouUltima) { container.innerHTML += `<span class="px-2">...</span>`; mostrouUltima = true; }
+            if (!mostrouUltima) { container.innerHTML += `<span class="px-2 text-gray-400">...</span>`; mostrouUltima = true; }
         }
     }
     
-    if (mostrouUltima || paginaAtual < totalPags - 1) container.innerHTML += `<button onclick="aplicarFiltros(${totalPags})" class="p-2 border rounded">${totalPags}</button>`;
-    if (paginaAtual < totalPags) container.innerHTML += `<button onclick="aplicarFiltros(${paginaAtual + 1})" class="p-2 border rounded">»</button>`;
+    if (mostrouUltima || paginaAtual < totalPags - 1) container.innerHTML += `<button onclick="aplicarFiltros(${totalPags})" class="p-2 border rounded hover:bg-gray-50 transition">${totalPags}</button>`;
+    if (paginaAtual < totalPags) container.innerHTML += `<button onclick="aplicarFiltros(${paginaAtual + 1})" class="p-2 border rounded hover:bg-gray-50 transition">»</button>`;
 }
 
 // PDF Exportação
@@ -313,13 +384,7 @@ async function gerarPDF() {
 // 5. INICIALIZAÇÃO AUTOMÁTICA
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
-    const ids = Object.keys(progressoUsuario);
-    let acertos = 0;
-    ids.forEach(id => { if (progressoUsuario[id].acertou) acertos++; });
-    
-    if(document.getElementById('stat-total')) document.getElementById('stat-total').innerText = ids.length;
-    if(document.getElementById('stat-acertos')) document.getElementById('stat-acertos').innerText = acertos;
-    if(document.getElementById('stat-erros')) document.getElementById('stat-erros').innerText = ids.length - acertos;
+    atualizarNumerosEstatisticas();
     if(document.getElementById('sidebar-avatar') && currentUser) document.getElementById('sidebar-avatar').innerText = currentUser.charAt(0).toUpperCase();
 
     if (currentUser === 'davi' && document.getElementById('admin-panel')) {
