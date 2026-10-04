@@ -4,21 +4,30 @@ import json, glob, os, sys
 app = Flask(__name__)
 
 # ==========================================
-# 1. CARREGAMENTO DO BANCO DE QUESTÕES (À Prova de Falhas)
+# 1. CARREGAMENTO BULLETPROOF (Caminho Absoluto)
 # ==========================================
 banco_questoes = []
-arquivos_json = sorted(glob.glob("questao_*.json"))
+log_erros = [] # Vai guardar os erros para o Raio-X
 
-print("="*50, flush=True)
-print(f"-> INICIANDO SERVIDOR: {len(arquivos_json)} arquivos JSON encontrados.", flush=True)
+# Força o Python a olhar na mesma pasta EXATA onde o app.py está
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-for arquivo in arquivos_json:
+# Procura os arquivos ignorando letras maiúsculas ou minúsculas
+arquivos_json = []
+for arquivo in os.listdir(BASE_DIR):
+    if arquivo.lower().startswith("questao_") and arquivo.lower().endswith(".json"):
+        arquivos_json.append(os.path.join(BASE_DIR, arquivo))
+
+# Ordena os arquivos do 1 ao 15
+arquivos_json.sort()
+
+for caminho_arquivo in arquivos_json:
+    nome_arquivo = os.path.basename(caminho_arquivo)
     try:
-        # Tenta ler com a codificação padrão da internet (utf-8)
-        with open(arquivo, 'r', encoding='utf-8') as f:
+        with open(caminho_arquivo, 'r', encoding='utf-8') as f:
             dados = json.load(f)
             
-            # Limpa falhas dentro do JSON para o site não travar
+            # Limpeza preventiva para não travar o frontend
             for q in dados:
                 if 'temas_dinamicos' not in q or not q['temas_dinamicos']:
                     q['temas_dinamicos'] = ['Geral', 'Geral', 'Geral']
@@ -28,25 +37,30 @@ for arquivo in arquivos_json:
                     q['alternativas'] = []
                     
             banco_questoes.extend(dados)
-            print(f"[OK] {arquivo} carregado com sucesso.", flush=True)
             
     except UnicodeDecodeError:
-        print(f"[AVISO] Erro de codificação no {arquivo}. Tentando formato Windows...", flush=True)
         try:
-            with open(arquivo, 'r', encoding='latin-1') as f:
-                dados = json.load(f)
-                banco_questoes.extend(dados)
-                print(f"[OK] {arquivo} carregado usando formato alternativo.", flush=True)
+            # Tenta ler com padrão do Windows caso o UTF-8 falhe
+            with open(caminho_arquivo, 'r', encoding='latin-1') as f:
+                banco_questoes.extend(json.load(f))
         except Exception as e2:
-            print(f"[ERRO CRÍTICO] O arquivo {arquivo} está corrompido: {e2}", flush=True)
-            
+            log_erros.append(f"Erro de formato no {nome_arquivo}: {str(e2)}")
     except Exception as e:
-        print(f"[ERRO CRÍTICO] Falha geral ao ler {arquivo}: {e}", flush=True)
-
-print(f"-> TOTAL DE QUESTÕES NA MEMÓRIA: {len(banco_questoes)}", flush=True)
-print("="*50, flush=True)
+        log_erros.append(f"Erro crítico no {nome_arquivo}: {str(e)}")
 
 
+# ==========================================
+# ROTA SECRETA DE RAIO-X (NOVIDADE)
+# ==========================================
+@app.route('/api/debug')
+def debug():
+    return jsonify({
+        "1_pasta_raiz": BASE_DIR,
+        "2_arquivos_encontrados": [os.path.basename(f) for f in arquivos_json],
+        "3_total_questoes_carregadas": len(banco_questoes),
+        "4_erros_de_leitura": log_erros,
+        "5_tudo_que_tem_na_pasta": os.listdir(BASE_DIR)
+    })
 # ==========================================
 # 2. GESTÃO DE USUÁRIOS
 # ==========================================
