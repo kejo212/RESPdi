@@ -58,7 +58,6 @@ async function enviarCadastro() {
 // 3. PAINEL DO DAVI (APROVAR, BLOQUEAR E LOGS)
 // ==========================================
 async function carregarPainelAdmin() {
-    // 1. Carrega Pendentes
     try {
         const resP = await fetch('/api/admin/pendentes');
         const dataP = await resP.json();
@@ -77,7 +76,6 @@ async function carregarPainelAdmin() {
         }
     } catch(e) {}
 
-    // 2. Carrega Ativos (Gestão)
     try {
         const resA = await fetch('/api/admin/usuarios_ativos');
         const dataA = await resA.json();
@@ -123,7 +121,6 @@ async function carregarLogsServidor() {
         if (isAtBottom) container.scrollTop = container.scrollHeight;
     } catch (e) { }
 }
-
 
 // ==========================================
 // 4. MOTOR DE QUESTÕES E FEEDBACK VISUAL
@@ -196,50 +193,56 @@ function renderizarQuestoesUI(questoes) {
         let tag = '';
         if (status && status.timestamp && ((Date.now() - status.timestamp) / 3600000 >= 1)) {
             const cor = status.acertou ? 'bg-green-500' : 'bg-red-500';
-            tag = `<div class="absolute -top-3 right-6 md:right-10 ${cor} text-white px-3 py-1 rounded-full text-[10px] md:text-xs font-bold shadow-lg animate-fade-in">${status.acertou ? 'Correta' : 'Incorreta'}</div>`;
+            tag = `<div class="absolute -top-3 right-4 md:right-10 ${cor} text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-fade-in">${status.acertou ? 'Correta' : 'Incorreta'}</div>`;
         }
 
-        let alts = `<div class="mt-5 space-y-3" id="alts-${q.id}">`;
+        // LIMPEZA: Remove a palavra "Enunciado:" do início do texto, caso ela exista (ignorando maiúsculas e espaços)
+        let textoEnunciado = q.enunciado.replace(/^Enunciado\s*:\s*/i, '');
+
+        let alts = `<div class="mt-5 space-y-3 w-full" id="alts-${q.id}">`;
         q.alternativas.forEach(alt => {
             const letra = alt.charAt(0);
-            // text-sm para celular, md:text-base para PC (aumenta o texto das alternativas)
-            let btnClasses = "w-full text-left p-4 border rounded-xl transition-all duration-300 text-sm md:text-base ";
+            // ALINHAMENTO: Substituído 'text-left' por 'text-justify' para as alternativas
+            let btnClasses = "w-full text-justify p-4 border rounded-xl transition-all duration-300 text-base md:text-lg break-words ";
+            
             if (status) {
                 btnClasses += "cursor-not-allowed opacity-80 ";
                 if (letra === q.gabarito_letra) btnClasses += "bg-green-50 border-green-400 text-green-900 font-bold "; 
                 else if (!status.acertou && status.escolhida === letra) btnClasses += "bg-red-50 border-red-300 text-red-900 "; 
                 else btnClasses += "bg-gray-50 border-gray-200 text-gray-500 "; 
-            } else { btnClasses += "bg-gray-50 border-gray-200 hover:border-blue-300 hover:bg-white text-gray-700 "; }
+            } else { btnClasses += "bg-gray-50 border-gray-200 hover:border-blue-300 hover:bg-white text-gray-800 "; }
+            
             alts += `<button id="btn-${q.id}-${letra}" ${status ? 'disabled' : ''} onclick="responderMestre('${q.id}', '${letra}', '${q.gabarito_letra}')" class="${btnClasses}">${alt}</button>`;
         });
         alts += `</div>`;
 
-        const iconeBandeira = `<svg class="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path></svg>`;
-        const btnReport = `<button onclick="document.getElementById('report-box-${q.id}').classList.toggle('hidden')" class="text-gray-300 hover:text-red-500 transition" title="Reportar erro nesta questão">${iconeBandeira}</button>`;
+        const iconeBandeira = `<svg class="w-6 h-6 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path></svg>`;
+        const btnReport = `<button onclick="document.getElementById('report-box-${q.id}').classList.toggle('hidden')" class="text-gray-300 hover:text-red-500 transition p-2" title="Reportar erro nesta questão">${iconeBandeira}</button>`;
         const boxReport = `
-            <div id="report-box-${q.id}" class="hidden mt-4 p-4 bg-red-50 border border-red-100 rounded-xl animate-fade-in">
-                <p class="text-[10px] md:text-xs font-bold text-red-700 mb-2 uppercase tracking-wide">Reportar Problema</p>
-                <textarea id="texto-report-${q.id}" rows="2" class="w-full p-3 rounded-lg border border-red-200 text-sm outline-none focus:ring-2 focus:ring-red-400 resize-none" placeholder="Ex: Gabarito incorreto, alternativa faltando..."></textarea>
-                <div class="flex justify-end gap-3 mt-2">
-                    <button onclick="document.getElementById('report-box-${q.id}').classList.add('hidden')" class="text-sm text-gray-500 hover:underline">Cancelar</button>
-                    <button onclick="enviarReporte('${q.id}')" class="text-sm bg-red-500 hover:bg-red-600 text-white font-bold px-4 py-1.5 rounded transition">Enviar ao Davi</button>
+            <div id="report-box-${q.id}" class="hidden mt-4 p-4 bg-red-50 border border-red-100 rounded-xl animate-fade-in w-full">
+                <p class="text-xs font-bold text-red-700 mb-2 uppercase tracking-wide">Reportar Problema</p>
+                <textarea id="texto-report-${q.id}" rows="2" class="w-full p-3 rounded-lg border border-red-200 text-base outline-none focus:ring-2 focus:ring-red-400 resize-none" placeholder="Ex: Gabarito incorreto, falta de imagem..."></textarea>
+                <div class="flex justify-end gap-3 mt-3">
+                    <button onclick="document.getElementById('report-box-${q.id}').classList.add('hidden')" class="text-base text-gray-500 hover:underline px-2">Cancelar</button>
+                    <button onclick="enviarReporte('${q.id}')" class="text-base bg-red-500 hover:bg-red-600 text-white font-bold px-5 py-2 rounded-lg transition">Enviar</button>
                 </div>
             </div>`;
 
-        const btnRes = `<div class="flex justify-between items-center mt-5">
-                            <button onclick="mostrarResolucao('${q.id}', false)" class="text-blue-600 text-sm md:text-base font-bold hover:underline">Ver Resolução</button>
+        const btnRes = `<div class="flex justify-between items-center mt-5 w-full">
+                            <button onclick="mostrarResolucao('${q.id}', false)" class="text-blue-600 text-base md:text-lg font-bold hover:underline p-2 -ml-2">Ver Resolução</button>
                             ${btnReport}
                         </div>`;
-        const comHtml = `<div id="com-${q.id}" class="hidden mt-4 p-5 bg-blue-50 border border-blue-100 rounded-xl text-left animate-fade-in"><p class="font-black text-blue-900 mb-2 text-sm md:text-base">Gabarito Oficial: ${q.gabarito_letra}</p><p class="text-gray-700 leading-relaxed text-sm md:text-base">${q.comentario}</p></div>`;
+        
+        // ALINHAMENTO: Comentário/Resolução justificado ('text-justify' em vez de 'text-left')
+        const comHtml = `<div id="com-${q.id}" class="hidden mt-4 p-5 bg-blue-50 border border-blue-100 rounded-xl text-justify animate-fade-in w-full"><p class="font-black text-blue-900 mb-2 text-base md:text-lg">Gabarito: ${q.gabarito_letra}</p><p class="text-gray-800 leading-relaxed text-base break-words">${q.comentario}</p></div>`;
 
         container.innerHTML += `
-            <div class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-100 mb-6 relative">
+            <div class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-100 mb-6 relative w-full overflow-hidden">
                 ${tag}
-                <!-- Diminui os temas no mobile text-[10px] e permite quebrar a linha -->
-                <div class="text-[10px] md:text-xs text-gray-400 mb-3 font-bold tracking-widest uppercase break-words leading-relaxed">${q.temas_dinamicos.join(' • ')}</div>
+                <div class="text-xs text-gray-400 mb-3 font-bold tracking-widest uppercase break-words leading-relaxed">${q.temas_dinamicos.join(' • ')}</div>
                 
-                <!-- Enunciado com fonte equilibrada -->
-                <p class="text-base md:text-lg text-left leading-relaxed font-medium text-gray-800">${q.enunciado}</p>
+                <!-- ALINHAMENTO: Enunciado justificado ('text-justify') usando o 'textoEnunciado' limpo -->
+                <p class="text-base md:text-lg text-justify leading-relaxed font-bold text-gray-900 break-words">${textoEnunciado}</p>
                 
                 ${alts}
                 ${btnRes}
@@ -258,7 +261,7 @@ function responderMestre(id, escolhida, correta) {
     for (let btn of botoes) {
         btn.disabled = true;
         btn.classList.add('cursor-not-allowed', 'opacity-80');
-        btn.classList.remove('hover:border-blue-300', 'hover:bg-white', 'text-gray-700');
+        btn.classList.remove('hover:border-blue-300', 'hover:bg-white', 'text-gray-800');
         const letraBtn = btn.id.split('-').pop();
         if (letraBtn === correta) { btn.classList.add('bg-green-50', 'border-green-400', 'text-green-900', 'font-bold'); btn.classList.remove('bg-gray-50', 'border-gray-200'); }
         else if (letraBtn === escolhida && escolhida !== correta) { btn.classList.add('bg-red-50', 'border-red-300', 'text-red-900'); btn.classList.remove('bg-gray-50', 'border-gray-200'); }
@@ -280,7 +283,6 @@ function mostrarResolucao(id, autoAberta = false) {
     }
 }
 
-// NOVO: Função de Enviar Reporte
 async function enviarReporte(idQuestao) {
     const textoBox = document.getElementById(`texto-report-${idQuestao}`);
     const motivo = textoBox.value.trim();
@@ -338,7 +340,7 @@ async function gerarPDF() {
     doc.setFontSize(16); doc.text("RESPdi - Simulado", 10, y); y += 10; doc.setFontSize(10);
     dados.questoes.forEach((q, idx) => {
         gabaritoArr.push([idx + 1, q.gabarito_letra]);
-        let textoQuestao = `Questao ${idx + 1}: ${q.enunciado}\n`;
+        let textoQuestao = `Questao ${idx + 1}: ${q.enunciado.replace(/^Enunciado\s*:\s*/i, '')}\n`;
         q.alternativas.forEach(alt => textoQuestao += `${alt}\n`);
         const lines = doc.splitTextToSize(textoQuestao, 180);
         if (y + (lines.length * 5) > 280) { doc.addPage(); y = 20; }
