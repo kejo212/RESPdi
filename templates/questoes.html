@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>RESPdi - Simulado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
+        .animate-pop { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .page-link { padding: 0.5rem 1rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; transition: all 0.2s; cursor: pointer; }
+        .page-link.active { background-color: #2563eb; color: white; border-color: #2563eb; font-weight: bold; transform: scale(1.1); }
+        .page-link:hover:not(.active) { background-color: #f3f4f6; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800 pb-20">
+    {% include 'sidebar.html' %}
+    
+    <div class="pl-28 pt-8 pr-8 max-w-7xl">
+        
+        <!-- Bloco de Filtros Moderno -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 animate-fade-in-up">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Filtros Inteligentes</h2>
+                
+                <div class="flex gap-4">
+                    <select id="limite-pagina" class="p-2 bg-gray-50 border rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="20">20 por pág</option>
+                        <option value="50">50 por pág</option>
+                        <option value="100">100 por pág</option>
+                    </select>
+                    <button onclick="gerarPDF()" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-600 transition-colors flex items-center gap-2 shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Exportar PDF
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <select id="f-mat" class="p-3 bg-gray-50 border rounded-xl text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-blue-500"><option value="Todos">Todas as Matérias</option></select>
+                <select id="f-ass" class="p-3 bg-gray-50 border rounded-xl text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-blue-500"><option value="Todos">Todos os Conteúdos</option></select>
+                <select id="f-sub" class="p-3 bg-gray-50 border rounded-xl text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-blue-500"><option value="Todos">Todos os Assuntos</option></select>
+                
+                <div class="md:col-span-3">
+                    <button onclick="aplicarFiltros()" class="w-full bg-gray-900 text-white p-3 rounded-xl font-bold hover:bg-black hover:shadow-lg transition-all duration-300">
+                        Aplicar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Container das Questões -->
+        <div id="questoes-container" class="space-y-8"></div>
+        
+        <!-- Paginação Inteligente -->
+        <div id="paginacao-container" class="mt-12 flex justify-center gap-2 items-center"></div>
+
+    </div>
+
+    <!-- Modal de Reporte (Alarme) -->
+    <div id="modal-report" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-[100] backdrop-blur-sm transition-opacity">
+        <div class="bg-white p-8 rounded-2xl w-96 shadow-2xl animate-pop">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2 text-red-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                Reportar Problema
+            </h3>
+            <div class="space-y-3 mb-6">
+                <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition"><input type="radio" name="motivo" value="Gabarito errado" class="w-4 h-4 text-red-600"> Gabarito Oficial Errado</label>
+                <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition"><input type="radio" name="motivo" value="Tema errado" class="w-4 h-4 text-red-600"> Classificação/Tema Incorreto</label>
+                <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition"><input type="radio" name="motivo" value="Elementos faltando" class="w-4 h-4 text-red-600"> Faltam Imagens ou Texto</label>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('modal-report').classList.add('hidden')" class="flex-1 bg-gray-200 text-gray-700 font-bold p-3 rounded-xl hover:bg-gray-300 transition">Cancelar</button>
+                <button onclick="enviarReport()" class="flex-1 bg-red-600 text-white font-bold p-3 rounded-xl hover:bg-red-700 transition shadow-md">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            carregarFiltros();
+            aplicarFiltros();
+        });
+    </script>
+</body>
+</html>

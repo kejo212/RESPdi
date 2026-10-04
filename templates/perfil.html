@@ -1,0 +1,35 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>RESPdi - Perfil</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+    {% include 'sidebar.html' %}
+    
+    <div class="pl-28 pt-10 pr-10 max-w-4xl">
+        <div class="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-8 animate-[fadeInUp_0.5s_ease-out]">
+            <div class="w-32 h-32 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-5xl font-black shadow-inner" id="perfil-avatar">U</div>
+            <div>
+                <h1 class="text-4xl font-black text-gray-900 mb-1" id="perfil-nome">Usuário</h1>
+                <p class="text-gray-500 mb-6 font-medium tracking-wide uppercase text-sm">Estudante de Medicina</p>
+                <button onclick="sair()" class="text-red-500 font-bold hover:bg-red-50 px-4 py-2 rounded-lg transition-colors border border-red-200">Desconectar Sessão</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const user = localStorage.getItem('currentUser');
+        if(!user) window.location.href = '/';
+        document.getElementById('perfil-nome').innerText = user;
+        document.getElementById('perfil-avatar').innerText = user.charAt(0).toUpperCase();
+        
+        function sair() {
+            localStorage.removeItem('currentUser');
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

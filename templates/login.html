@@ -1,0 +1,65 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>RESPdi - Autenticação</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bg-pattern {
+            background-color: #0f172a;
+            background-image: radial-gradient(#1e293b 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-pattern min-h-screen flex items-center justify-center font-sans text-gray-800">
+    <div class="bg-white p-10 rounded-2xl shadow-2xl w-[400px] relative overflow-hidden animate-fade-in">
+        
+        <!-- Formulário de Login -->
+        <div id="form-login" class="transition-transform duration-500 ease-in-out transform translate-x-0">
+            <h2 class="text-3xl font-black text-center text-blue-900 mb-2">RESPdi</h2>
+            <p class="text-center text-gray-500 mb-8 text-sm">Acesse sua plataforma de estudos</p>
+            
+            <div class="space-y-4">
+                <input type="text" id="username" placeholder="Usuário" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                <input type="password" id="password" placeholder="Senha" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                <button onclick="fazerLogin()" class="w-full bg-blue-600 text-white font-bold p-3 rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all duration-300">Entrar</button>
+            </div>
+            
+            <p class="text-center mt-6 text-sm text-gray-600">
+                Novo por aqui? <button onclick="alternarTela('form-cadastro-1')" class="text-blue-600 font-bold hover:underline">Solicite acesso</button>
+            </p>
+        </div>
+
+        <!-- Formulário de Cadastro (Etapa 1) -->
+        <div id="form-cadastro-1" class="absolute top-10 left-10 right-10 transition-transform duration-500 ease-in-out transform translate-x-full hidden">
+            <h2 class="text-2xl font-bold text-center text-blue-900 mb-6">Criar Conta (1/2)</h2>
+            <div class="space-y-4">
+                <input type="text" id="new-user" placeholder="Escolha um Usuário" class="w-full p-3 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="password" id="new-pass" placeholder="Crie uma Senha" class="w-full p-3 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <button onclick="alternarTela('form-cadastro-2')" class="w-full bg-gray-800 text-white font-bold p-3 rounded-lg hover:bg-gray-900 transition-all duration-300">Próximo ➔</button>
+                <button onclick="alternarTela('form-login')" class="w-full text-gray-500 text-sm hover:underline mt-2">Voltar ao Login</button>
+            </div>
+        </div>
+
+        <!-- Formulário de Cadastro (Etapa 2) -->
+        <div id="form-cadastro-2" class="absolute top-10 left-10 right-10 transition-transform duration-500 ease-in-out transform translate-x-full hidden">
+            <h2 class="text-2xl font-bold text-center text-blue-900 mb-4">Sobre Você (2/2)</h2>
+            <div class="space-y-3 mb-6">
+                <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-50 rounded-lg transition-colors"><input type="checkbox" class="w-4 h-4 text-blue-600 tag-check" value="PET UFRN"> <span class="text-sm font-medium">Faço parte do PET UFRN</span></label>
+                <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-50 rounded-lg transition-colors"><input type="checkbox" class="w-4 h-4 text-blue-600 tag-check" value="IFMSA Brasil"> <span class="text-sm font-medium">Faço parte da IFMSA Brasil</span></label>
+                <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-50 rounded-lg transition-colors"><input type="checkbox" class="w-4 h-4 text-blue-600 tag-check" value="PET Clima"> <span class="text-sm font-medium">Faço parte do PET Clima</span></label>
+                <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-50 rounded-lg transition-colors"><input type="checkbox" class="w-4 h-4 text-blue-600 tag-check" value="Não sou PF"> <span class="text-sm font-medium">Não sou da PF</span></label>
+                <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-50 rounded-lg transition-colors"><input type="checkbox" class="w-4 h-4 text-blue-600 tag-check" value="Boas intenções"> <span class="text-sm font-medium">Tenho boas intenções</span></label>
+            </div>
+            <button onclick="enviarCadastro()" class="w-full bg-green-600 text-white font-bold p-3 rounded-lg hover:bg-green-700 hover:shadow-lg transition-all duration-300">Solicitar Aprovação</button>
+            <button onclick="alternarTela('form-cadastro-1')" class="w-full text-gray-500 text-sm hover:underline mt-4">Voltar</button>
+        </div>
+
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+</html>
