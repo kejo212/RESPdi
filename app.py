@@ -94,12 +94,26 @@ def login():
 def cadastro():
     dados = request.json
     db = carregar_usuarios()
-    user = dados.get('username')
-    if user in db: return jsonify({"erro": "Usuário já existe."}), 400
+    user = dados.get('username', '').strip()
+    
+    # 1. VALIDAÇÃO DE CARACTERES PROIBIDOS DO FIREBASE
+    caracteres_proibidos = ['.', '$', '#', '[', ']', '/']
+    if any(c in user for c in caracteres_proibidos):
+        return jsonify({"erro": "O nome de usuário não pode conter pontos (.) ou símbolos especiais."}), 400
+        
+    # 2. VERIFICA SE JÁ EXISTE
+    if user in db: 
+        return jsonify({"erro": "Este nome de usuário já existe."}), 400
+    
+    # 3. SALVA O NOVO USUÁRIO
     db[user] = {"senha": dados.get('password'), "status": "pendente", "tags": dados.get('tags', [])}
-    salvar_usuarios(db)
+    
+    if not fb_put('usuarios', db):
+        return jsonify({"erro": "Erro de comunicação com o Firebase."}), 500
+        
     registrar_log(f"Novo cadastro pendente: {user}")
     return jsonify({"sucesso": True})
+
 
 @app.route('/api/admin/pendentes', methods=['GET'])
 def listar_pendentes(): return jsonify({k: v for k, v in carregar_usuarios().items() if v['status'] == 'pendente'})
