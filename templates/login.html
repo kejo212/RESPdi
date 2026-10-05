@@ -6,71 +6,122 @@
     <title>RESPdi - Autenticação</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* Fundo com Imagem Médica e Sobreposição Azul Translúcida (70%) */
-        .bg-medical {
-            /* Imagem médica genérica via Unsplash (substituível) */
-            background-image: url('https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=1080&auto=format&fit=crop');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-        }
-        .overlay-blue {
-            /* Azul escuro com exatos 70% de transparência (0.7) */
-            background-color: rgba(15, 23, 42, 0.75); 
-        }
-    </style>
-</head>
-<body class="bg-medical min-h-screen font-sans flex flex-col relative overflow-hidden">
-    
-    <!-- Filtro Azul sobre a imagem médica -->
-    <div class="absolute inset-0 overlay-blue z-0"></div>
-
-    <!-- Barra Superior Fixa Branca -->
-    <header class="fixed top-0 left-0 w-full bg-white h-16 flex items-center justify-between px-5 z-50 shadow-md">
-        <div class="flex items-center gap-2">
-            <!-- Logo Médico SVG em Verde -->
-            <svg class="w-8 h-8 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.5Embora eu não consiga gerar ou desenhar um arquivo de imagem diretamente por ser uma inteligência artificial baseada em texto, eu fiz algo muito melhor: **eu transformei a sua referência visual diretamente no código-fonte final**. 
-
-Analisando a sua imagem `image_99d15c.png`, o layout apresenta uma arquitetura moderna lindíssima: uma barra superior branca fixa com um menu sanduíche, a logomarca com o símbolo médico em verde, um fundo fotográfico com uma forte camada de azul escuro, botões empilhados em branco e verde, e um botão flutuante do WhatsApp no canto inferior direito.
-
-Para que a sua tela fique **exatamente** igual ao design que você enviou, apliquei a transparência solicitada, travei a proporção para celular e limpei todo o excesso.
-
-Vá no arquivo **`templates/login.html`**, apague tudo e cole esta versão premium:
-
-```html
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <!-- Viewport travado para garantir a proporção exata do celular -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RESPdi - Autenticação</title>
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <style>
         .animate-fade-in { animation: fadeIn 0.8s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Esconde as barras de rolagem mas permite o scroll se necessário */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* Oculta a barra de rolagem mas permite o scroll se necessário */
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="relative min-h-screen font-sans overflow-hidden bg-slate-900">
+<body class="font-sans text-gray-800 bg-gray-900 overflow-x-hidden">
 
-    <!-- FUNDO COM IMAGEM MÉDICA E MÁSCARA AZUL (70% de opacidade) -->
-    <div class="absolute inset-0 z-0">
-        <!-- Imagem médica genérica de fundo -->
-        <img src="[https://images.unsplash.com/photo-1576091160550-2173ff9e5ee5?q=80&w=1000&auto=format&fit=crop](https://images.unsplash.com/photo-1576091160550-2173ff9e5ee5?q=80&w=1000&auto=format&fit=crop)" class="w-full h-full object-cover object-center opacity-60" alt="Fundo médico">
-        <!-- Overlay azul escuro/slate com 70% de transparência -->
-        <div class="absolute inset-0 bg-slate-900/70"></div>
-    </div>
-
-    <!-- BARRA SUPERIOR BRANCA FIXA -->
-    <header class="fixed top-0 left-0 w-full h-16 bg-white z-50 flex items-center justify-between px-5 shadow-md">
-        <!-- Logo Responsiva -->
+    <!-- 1. BARRA SUPERIOR FIXA BRANCA -->
+    <header class="fixed top-0 left-0 w-full bg-white h-16 shadow-md flex items-center justify-between px-6 z-50">
         <div class="flex items-center gap-2">
-            <!-- Símbolo da Cobra/Cálice Médico estilizado -->
-            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.1
+            <!-- Ícone Médico Verde -->
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            <span class="text-2xl font-black text-gray-800 tracking-tight">RESP<span class="text-green-600">di</span></span>
+        </div>
+        <!-- Ícone de Menu (Hamburger) -->
+        <button class="text-gray-500 hover:text-gray-800">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+    </header>
+
+    <!-- 2. FUNDO COM IMAGEM MÉDICA E SOBREPOSIÇÃO ESCURA -->
+    <main class="min-h-screen pt-16 flex items-center justify-center w-full px-6 relative animate-fade-in" 
+          style="background-image: linear-gradient(rgba(15, 23, 42, 0.85), rgba(30, 58, 138, 0.7)), url('https://unsplash.com/pt-br/fotografias/cirurgioes-realizando-procedimentos-na-sala-de-cirurgia--f5lWIvMkHQ'); background-size: cover; background-position: center; background-attachment: fixed;">
+        
+        <!-- Container dos Formulários (Ocupa a tela no mobile, tamanho fixo no PC) -->
+        <div class="w-full max-w-md h-[450px] relative overflow-hidden">
+            
+            <!-- ========================================== -->
+            <!-- FORMULÁRIO DE LOGIN -->
+            <!-- ========================================== -->
+            <div id="form-login" class="w-full h-full flex flex-col justify-center transition-all duration-500 ease-in-out transform translate-x-0 absolute inset-0">
+                
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-black text-white tracking-tight mb-2">Bem-vindo(a)</h2>
+                    <p class="text-gray-300 text-sm font-medium">Faça login para acessar o banco de questões</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <input type="text" id="username" placeholder="Login" class="w-full px-5 py-4 bg-white border-none rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all text-gray-900 font-bold text-base shadow-lg">
+                    
+                    <input type="password" id="password" placeholder="Senha" class="w-full px-5 py-4 bg-white border-none rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all text-gray-900 font-bold text-base shadow-lg">
+                    
+                    <!-- Botão Verde -->
+                    <button onclick="fazerLogin()" class="w-full bg-green-600 text-white font-black py-4 rounded-xl hover:bg-green-500 transition-all text-base shadow-lg shadow-green-900/50 mt-2">
+                        ACESSAR
+                    </button>
+                </div>
+                
+                <p class="text-center mt-8 text-sm text-gray-300">
+                    Ainda não tem conta? <button onclick="alternarTela('form-cadastro-1')" class="text-green-400 font-bold hover:text-green-300 transition-colors ml-1 underline">Cadastre-se</button>
+                </p>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- FORMULÁRIO DE CADASTRO (Etapa 1) -->
+            <!-- ========================================== -->
+            <div id="form-cadastro-1" class="w-full h-full flex flex-col justify-center transition-all duration-500 ease-in-out transform translate-x-full absolute inset-0 hidden">
+                
+                <div class="text-center mb-6">
+                    <h2 class="text-3xl font-black text-white tracking-tight mb-2">Criar Conta</h2>
+                    <p class="text-gray-300 text-sm font-medium">Etapa 1 de 2</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <input type="text" id="new-user" placeholder="Escolha um Usuário" class="w-full px-5 py-4 bg-white border-none rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all text-gray-900 font-bold text-base shadow-lg">
+                    
+                    <input type="password" id="new-pass" placeholder="Crie uma Senha" class="w-full px-5 py-4 bg-white border-none rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all text-gray-900 font-bold text-base shadow-lg">
+                    
+                    <button onclick="alternarTela('form-cadastro-2')" class="w-full bg-green-600 text-white font-black py-4 rounded-xl hover:bg-green-500 transition-all text-base shadow-lg shadow-green-900/50 mt-2">
+                        PRÓXIMO PASSO ➔
+                    </button>
+                    
+                    <button onclick="alternarTela('form-login')" class="w-full text-gray-400 text-sm font-medium hover:text-white transition-colors mt-2">
+                        Voltar ao Login
+                    </button>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- FORMULÁRIO DE CADASTRO (Etapa 2) -->
+            <!-- ========================================== -->
+            <div id="form-cadastro-2" class="w-full h-full flex flex-col justify-center transition-all duration-500 ease-in-out transform translate-x-full absolute inset-0 hidden">
+                
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-black text-white tracking-tight mb-2">Sobre Você</h2>
+                    <p class="text-gray-300 text-sm font-medium">Etapa 2 de 2</p>
+                </div>
+                
+                <!-- Caixa de tags com fundo escuro translúcido para combinar com o visual novo -->
+                <div class="space-y-3 mb-6 bg-gray-900/60 p-5 rounded-xl border border-gray-700/50 shadow-inner">
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-green-500 rounded border-none bg-white tag-check" value="PET UFRN"> <span class="text-base font-semibold text-gray-200">Faço parte do PET UFRN</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-green-500 rounded border-none bg-white tag-check" value="IFMSA Brasil"> <span class="text-base font-semibold text-gray-200">Faço parte da IFMSA Brasil</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-green-500 rounded border-none bg-white tag-check" value="PET Clima"> <span class="text-base font-semibold text-gray-200">Faço parte do PET Clima</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-green-500 rounded border-none bg-white tag-check" value="Não sou PF"> <span class="text-base font-semibold text-gray-200">Não sou da PF</span></label>
+                </div>
+                
+                <button onclick="enviarCadastro()" class="w-full bg-green-600 text-white font-black py-4 rounded-xl hover:bg-green-500 transition-all text-base shadow-lg shadow-green-900/50">
+                    ENVIAR SOLICITAÇÃO
+                </button>
+                <button onclick="alternarTela('form-cadastro-1')" class="w-full text-gray-400 text-sm font-medium hover:text-white transition-colors mt-4">
+                    Voltar
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Botão Flutuante do WhatsApp (Como na sua imagem de referência) -->
+    <a href="#" class="fixed bottom-6 right-6 bg-green-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform z-50 hover:bg-green-400">
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.015c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+    </a>
+
+    <!-- O link do JavaScript com versão atualizada -->
+    <script src="/static/app.js?v=2034"></script>
+    <script> document.getElementById('password').addEventListener('keypress', function(e){ if(e.key === 'Enter') fazerLogin(); }); </script>
+</body>
+</html>
