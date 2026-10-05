@@ -1,11 +1,12 @@
 from flask import Flask, request, jsonify, render_template, send_from_directory
-import json, glob, os, random
+import json, glob, os, random, requests
 from datetime import datetime
 
 app = Flask(__name__)
+FIREBASE_URL = "https://respdi-1b63d-default-rtdb.firebaseio.com"
 
 # ==========================================
-# 1. SISTEMA DE LOGS INTERNO (Terminal do Davi)
+# 1. FUNÇÕES DO FIREBASE & LOGS
 # ==========================================
 sys_logs = []
 def registrar_log(mensagem):
@@ -15,49 +16,47 @@ def registrar_log(mensagem):
     sys_logs.append(linha)
     if len(sys_logs) > 100: sys_logs.pop(0)
 
+def fb_get(path):
+    try: return requests.get(f"{FIREBASE_URL}/{path}.json").json() or {}
+    except: return {}
+
+def fb_put(path, data): requests.put(f"{FIREBASE_URL}/{path}.json", json=data)
+def fb_post(path, data): requests.post(f"{FIREBASE_URL}/{path}.json", json=data)
+def fb_patch(path, data): requests.patch(f"{FIREBASE_URL}/{path}.json", json=data)
+
 # ==========================================
 # 2. CARREGAMENTO DO BANCO DE QUESTÕES
 # ==========================================
 banco_questoes = []
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 arquivos_json = [os.path.join(BASE_DIR, f) for f in os.listdir(BASE_DIR) if f.lower().startswith("questao_") and f.lower().endswith(".json")]
 arquivos_json.sort()
 
-registrar_log("="*40)
-registrar_log(f"INICIANDO SISTEMA: {len(arquivos_json)} pacotes encontrados.")
-
+registrar_log(f"INICIANDO SISTEMA: Lendo {len(arquivos_json)} pacotes locais...")
 for caminho_arquivo in arquivos_json:
-    nome = os.path.basename(caminho_arquivo)
     try:
-        with open(caminho_arquivo, 'r', encoding='utf-8') as f:
-            banco_questoes.extend(json.load(f))
+        with open(caminho_arquivo, 'r', encoding='utf-8') as f: banco_questoes.extend(json.load(f))
     except UnicodeDecodeError:
         try:
-            with open(caminho_arquivo, 'r', encoding='latin-1') as f:
-                banco_questoes.extend(json.load(f))
+            with open(caminho_arquivo, 'r', encoding='latin-1') as f: banco_questoes.extend(json.load(f))
         except: pass
     except: pass
-
 registrar_log(f"SISTEMA PRONTO: {len(banco_questoes)} questões na memória.")
 
 # ==========================================
-# 3. GESTÃO DE USUÁRIOS E REPORTES
+# 3. GESTÃO DE USUÁRIOS (AGORA NO FIREBASE)
 # ==========================================
-ARQUIVO_USUARIOS = os.path.join(BASE_DIR, 'usuarios.json')
-ARQUIVO_REPORTES = os.path.join(BASE_DIR, 'reportes.json')
-
 def carregar_usuarios():
-    if not os.path.exists(ARQUIVO_USUARIOS):
-        with open(ARQUIVO_USUARIOS, 'w') as f:
-            json.dump({"davi": {"senha": "1234", "status": "aprovado", "tags": []}}, f)
-    with open(ARQUIVO_USUARIOS, 'r') as f: return json.load(f)
+    db = fb_get('usuarios')
+    if not db: 
+        db = {"davi": {"senha": "1234", "status": "aprovado", "tags": []}}
+        fb_put('usuarios', db)
+    return db
 
-def salvar_usuarios(db):
-    with open(ARQUIVO_USUARIOS, 'w') as f: json.dump(db, f, indent=4)
+def salvar_usuarios(db): fb_put('usuarios', db)
 
 # ==========================================
-# 4. ROTAS DAS PÁGINAS HTML E GOOGLE SEARCH CONSOLE
+# 4. ROTAS DAS PÁGINAS HTML & GOOGLE
 # ==========================================
 @app.route('/')
 def route_login(): return render_template('login.html')
@@ -72,12 +71,11 @@ def route_perfil(): return render_template('perfil.html')
 
 @app.route('/<path:filename>')
 def serve_google_verification(filename):
-    if filename.startswith('google') and filename.endswith('.html'):
-        return send_from_directory(BASE_DIR, filename)
+    if filename.startswith('google') and filename.endswith('.html'): return send_from_directory(BASE_DIR, filename)
     return "Página não encontrada", 404
 
 # ==========================================
-# 5. APIs DE AUTENTICAÇÃO E TRIBUNAL DO DAVI
+# 5. APIs DE AUTENTICAÇÃO E ADMINISTRAÇÃO
 # ==========================================
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -123,7 +121,6 @@ def resolver_pendencia():
         return jsonify({"sucesso": True})
     return jsonify({"erro": "Não encontrado"}), 404
 
-# NOVA ROTA: Exclusão Definitiva de Usuário
 @app.route('/api/admin/excluir', methods=['POST'])
 def excluir_usuario():
     dados = request.json
@@ -140,7 +137,32 @@ def excluir_usuario():
 def obter_logs(): return jsonify(sys_logs)
 
 # ==========================================
-# 6. APIs DO MOTOR DE QUESTÕES E FILTROS MÚLTIPLOS
+# 6. APIs DE SINCRONIZAÇÃO DE DADOS (FIREBASE)
+# ==========================================
+@app.route('/api/sync/<user>', methods=['GET'])
+def get_user_data(user):
+    # Puxa progresso, cadernos e histórico do Firebase no momento do login
+    return jsonify(fb_get(f'userdata/{user}'))
+
+@app.route('/api/sync/<user>', methods=['POST'])
+def update_user_data(user):
+    # Atualiza dados no Firebase em tempo real
+    payload = request.json
+    tipo = payload.get('tipo') 
+    dados = payload.get('dados')
+    fb_patch(f'userdata/{user}', {tipo: dados})
+    return jsonify({"sucesso": True})
+
+@app.route('/api/reportar', methods=['POST'])
+def reportar():
+    dados = request.json or {}
+    novo_reporte = { "id_questao": dados.get('id', '?'), "erro": dados.get('motivo', '?'), "usuario": dados.get('usuario', 'visitante'), "data": datetime.now().strftime("%d/%m/%Y %H:%M") }
+    fb_post('reportes', novo_reporte)
+    registrar_log(f"ALERTA: Usuário {novo_reporte['usuario']} reportou erro.")
+    return jsonify({"sucesso": True})
+
+# ==========================================
+# 7. MOTOR DE QUESTÕES E FILTROS MÚLTIPLOS
 # ==========================================
 @app.route('/api/categorias', methods=['GET'])
 def obter_categorias():
@@ -152,8 +174,6 @@ def obter_categorias():
 def obter_questoes():
     try:
         f = request.json or {}
-        
-        # Agora o backend aceita Listas de filtros para seleção múltipla
         mat_raw = f.get('materia', [])
         ass_raw = f.get('assunto', [])
         sub_raw = f.get('subassunto', [])
@@ -165,9 +185,8 @@ def obter_questoes():
         
         if not mats and not asss and not subs and not palavra:
             if not banco_questoes: return jsonify({"total": 0, "questoes": []})
-            qtd = min(100, len(banco_questoes))
             sorteadas = []
-            for q in random.sample(banco_questoes, qtd):
+            for q in random.sample(banco_questoes, min(100, len(banco_questoes))):
                 alts = q.get("alternativas", [])
                 sorteadas.append({
                     "id": str(q.get("id", "X")), "temas_dinamicos": q.get('temas_dinamicos', ['Geral', 'Geral', 'Geral']),
@@ -187,11 +206,9 @@ def obter_questoes():
             while len(t_clean) < 3: t_clean.append('Geral')
             m, a, s = str(t_clean[0]).strip(), str(t_clean[1]).strip(), str(t_clean[2]).strip()
             
-            # Lógica de Filtragem Múltipla (Se a lista tem filtros, verifica se a questão pertence a algum deles)
             if mats and m not in mats: continue
             if asss and a not in asss: continue
             if subs and s not in subs: continue
-            
             if palavra:
                 en = str(q.get("enunciado", "")).lower()
                 co = str(q.get("comentario", "")).lower()
@@ -202,26 +219,10 @@ def obter_questoes():
                 "id": str(q.get("id", "X")), "temas_dinamicos": [m, a, s],
                 "enunciado": str(q.get("enunciado", "")),
                 "alternativas": [str(x) for x in alts_brutas] if isinstance(alts_brutas, list) else [],
-                "gabarito_letra": str(q.get("gabarito_letra", "X")).strip().upper(),
-                "comentario": str(q.get("comentario", ""))
+                "gabarito_letra": str(q.get("gabarito_letra", "X")).strip().upper(), "comentario": str(q.get("comentario", ""))
             })
         inicio = (pagina - 1) * por_pagina
         return jsonify({"total": len(filtradas), "questoes": filtradas[inicio : inicio + por_pagina]})
     except Exception as e: return jsonify({"erro_interno": str(e)})
 
-@app.route('/api/reportar', methods=['POST'])
-def reportar():
-    dados = request.json or {}
-    novo_reporte = { "id_questao": dados.get('id', '?'), "erro": dados.get('motivo', '?'), "usuario": dados.get('usuario', 'visitante'), "data": datetime.now().strftime("%d/%m/%Y %H:%M") }
-    reportes = []
-    if os.path.exists(ARQUIVO_REPORTES):
-        try:
-            with open(ARQUIVO_REPORTES, 'r', encoding='utf-8') as f: reportes = json.load(f)
-        except: pass
-    reportes.append(novo_reporte)
-    with open(ARQUIVO_REPORTES, 'w', encoding='utf-8') as f: json.dump(reportes, f, indent=4)
-    registrar_log(f"ALERTA: Usuário {novo_reporte['usuario']} reportou erro.")
-    return jsonify({"sucesso": True})
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+if __name__ == '__main__': app.run(debug=True, port=5000)
