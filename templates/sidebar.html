@@ -1,28 +1,24 @@
-<!-- Barra Lateral (Desktop) / Barra Inferior (Mobile) -->
 <div class="fixed bottom-0 left-0 w-full md:w-20 h-16 md:h-screen bg-gray-900 shadow-2xl flex md:flex-col items-center justify-around md:justify-start md:py-8 z-[100] transition-all duration-300">
-    
-    <!-- Logo (Desktop) -->
-    <div class="hidden md:flex bg-blue-600 text-white w-12 h-12 rounded-xl items-center justify-center font-black text-xl mb-12 shadow-lg">
-        R
-    </div>
+    <div class="hidden md:flex bg-green-600 text-white w-12 h-12 rounded-xl items-center justify-center font-black text-xl mb-10 shadow-lg">R</div>
 
-    <!-- Link: Dashboard -->
-    <a href="/dashboard" class="flex flex-col items-center text-gray-400 hover:text-white group md:mb-8 p-2 md:p-0">
+    <a href="/dashboard" class="flex flex-col items-center text-gray-400 hover:text-white group md:mb-8 p-2 md:p-0" title="Início">
         <svg class="w-6 h-6 md:w-7 md:h-7 mb-1 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
         <span class="text-[10px] md:hidden font-medium">Início</span>
     </a>
 
-    <!-- Link: Questões -->
-    <a href="/questoes" class="flex flex-col items-center text-gray-400 hover:text-white group md:mb-8 p-2 md:p-0">
+    <a href="/questoes" class="flex flex-col items-center text-gray-400 hover:text-white group md:mb-8 p-2 md:p-0" title="Questões Soltas">
         <svg class="w-6 h-6 md:w-7 md:h-7 mb-1 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
         <span class="text-[10px] md:hidden font-medium">Questões</span>
     </a>
 
-    <!-- Avatar -->
-    <a href="/perfil" class="md:mt-auto flex flex-col items-center group p-2 md:p-0">
-        <div id="sidebar-avatar" class="w-7 h-7 md:w-10 md:h-10 rounded-full bg-gray-700 text-white flex items-center justify-center font-bold text-xs md:text-base border-2 border-gray-600 group-hover:border-blue-500 transition-colors">
-            U
-        </div>
+    <!-- NOVO LINK: CADERNOS -->
+    <a href="/cadernos" class="flex flex-col items-center text-gray-400 hover:text-white group md:mb-8 p-2 md:p-0" title="Meus Cadernos">
+        <svg class="w-6 h-6 md:w-7 md:h-7 mb-1 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+        <span class="text-[10px] md:hidden font-medium">Cadernos</span>
+    </a>
+
+    <a href="/perfil" class="md:mt-auto flex flex-col items-center group p-2 md:p-0" title="Meu Perfil">
+        <div id="sidebar-avatar" class="w-7 h-7 md:w-10 md:h-10 rounded-full bg-gray-700 text-white flex items-center justify-center font-bold text-xs md:text-base border-2 border-gray-600 group-hover:border-green-500 transition-colors">U</div>
         <span class="text-[10px] md:hidden text-gray-400 mt-1 font-medium">Perfil</span>
     </a>
 </div>
