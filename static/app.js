@@ -1,13 +1,22 @@
 // ==========================================
-// 1. VARIÁVEIS GLOBAIS SEGURAS POR USUÁRIO
+// 1. VARIÁVEIS GLOBAIS EM NUVEM
 // ==========================================
 let currentUser = localStorage.getItem('currentUser') || 'visitante';
 let progressoUsuario = {};
-try {
-    let salvo = localStorage.getItem(`progresso_${currentUser}`);
-    if(salvo) progressoUsuario = JSON.parse(salvo);
-} catch(e) {}
+let cadernosUsuario = [];
+let historicoUsuario = [];
 let paginaAtual = 1;
+
+// Motor de Sincronização em Nuvem (Firebase via Python)
+async function syncDB(tipo, dados) {
+    if(currentUser === 'visitante') return;
+    try {
+        await fetch(`/api/sync/${currentUser}`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({tipo: tipo, dados: dados})
+        });
+    } catch(e) { console.error("Erro ao sincronizar com nuvem", e); }
+}
 
 // ==========================================
 // 2. SISTEMA DE LOGIN E CADASTRO
@@ -29,7 +38,7 @@ async function fazerLogin() {
         const data = await res.json();
         if(res.ok && data.sucesso) {
             localStorage.setItem('currentUser', u);
-            window.location.href = '/dashboard'; // Redireciona e força reinício seguro
+            window.location.href = '/dashboard';
         } else { alert(data.erro || "Erro ao fazer login."); }
     } catch (e) { alert("Erro de conexão com o servidor."); }
 }
@@ -76,13 +85,9 @@ async function carregarPainelAdmin() {
 }
 
 async function resolverPendente(user, acao) { await fetch('/api/admin/resolver', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: user, acao: acao}) }); carregarPainelAdmin(); }
-
 async function excluirUsuario(user) {
-    if(!confirm(`⚠️ ATENÇÃO!\nTem certeza que deseja apagar o usuário '${user}' permanentemente?`)) return;
-    try {
-        await fetch('/api/admin/excluir', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: user}) });
-        carregarPainelAdmin();
-    } catch(e) { alert("Erro ao excluir usuário."); }
+    if(!confirm(`⚠️ ATENÇÃO!\nTem certeza que deseja apagar o usuário '${user}' permanentemente do Firebase?`)) return;
+    try { await fetch('/api/admin/excluir', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: user}) }); carregarPainelAdmin(); } catch(e) { alert("Erro ao excluir usuário."); }
 }
 
 async function carregarLogsServidor() {
@@ -104,29 +109,20 @@ async function carregarLogsServidor() {
 // 4. MOTOR DE FILTROS MÚLTIPLOS E BUSCA
 // ==========================================
 let categoriasDB = {};
-
-// Função auxiliar para pegar múltiplos valores selecionados
-const getSelectedValues = (id) => {
-    const el = document.getElementById(id);
-    if (!el) return [];
-    return Array.from(el.selectedOptions).map(opt => opt.value);
-};
+const getSelectedValues = (id) => { const el = document.getElementById(id); return el ? Array.from(el.selectedOptions).map(opt => opt.value) : []; };
 
 async function carregarFiltros() {
     try {
         const res = await fetch('/api/categorias'); categoriasDB = await res.json();
         const sMat = document.getElementById('f-mat'); if(!sMat) return;
-        sMat.innerHTML = ''; // Removido option "Todos" pois em select multiple, não selecionar nada = todos
+        sMat.innerHTML = '';
         Object.keys(categoriasDB).sort().forEach(m => { sMat.innerHTML += `<option value="${m}">${m} (${categoriasDB[m].count})</option>`; });
         
         sMat.addEventListener('change', () => {
             const mats = getSelectedValues('f-mat'); const sAss = document.getElementById('f-ass'); const sSub = document.getElementById('f-sub');
             sAss.innerHTML = ''; sSub.innerHTML = ''; sSub.disabled = true;
             if (mats.length > 0) {
-                mats.forEach(mat => {
-                    const assData = categoriasDB[mat].assuntos;
-                    Object.keys(assData).sort().forEach(a => { sAss.innerHTML += `<option value="${a}">${a} (${assData[a].count})</option>`; });
-                });
+                mats.forEach(mat => { Object.keys(categoriasDB[mat].assuntos).sort().forEach(a => { sAss.innerHTML += `<option value="${a}">${a} (${categoriasDB[mat].assuntos[a].count})</option>`; }); });
                 sAss.disabled = false;
             } else { sAss.disabled = true; }
         });
@@ -135,14 +131,7 @@ async function carregarFiltros() {
             const mats = getSelectedValues('f-mat'); const asss = getSelectedValues('f-ass'); const sSub = document.getElementById('f-sub');
             sSub.innerHTML = '';
             if (asss.length > 0) {
-                mats.forEach(mat => {
-                    asss.forEach(ass => {
-                        if(categoriasDB[mat].assuntos[ass]) {
-                            const subData = categoriasDB[mat].assuntos[ass].subs;
-                            Object.keys(subData).sort().forEach(s => { sSub.innerHTML += `<option value="${s}">${s} (${subData[s]})</option>`; });
-                        }
-                    });
-                });
+                mats.forEach(mat => { asss.forEach(ass => { if(categoriasDB[mat].assuntos[ass]) { Object.keys(categoriasDB[mat].assuntos[ass].subs).sort().forEach(s => { sSub.innerHTML += `<option value="${s}">${s} (${categoriasDB[mat].assuntos[ass].subs[s]})</option>`; }); } }); });
                 sSub.disabled = false;
             } else { sSub.disabled = true; }
         });
@@ -158,53 +147,41 @@ async function aplicarFiltros(pagina = 1) {
     
     const aviso = document.getElementById('aviso-aleatorio');
     if (aviso) { (mats.length > 0 || palavra) ? aviso.classList.add('hidden') : aviso.classList.remove('hidden'); }
-
     const payload = { pagina: paginaAtual, limite: parseInt(limit), materia: mats, assunto: asss, subassunto: subs, palavraChave: palavra };
     
-    // Salvar Histórico (se for uma pesquisa nova e real)
     if(pagina === 1 && (mats.length > 0 || palavra)) { registrarHistoricoFiltro({mats, asss, subs, palavra}); }
 
     try {
         const res = await fetch('/api/questoes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
         const dados = await res.json();
-        renderizarQuestoesUI(dados.questoes);
-        renderizarPaginacaoUI(dados.total, parseInt(limit));
-        // Se a chamada veio da pagina de questoes (nao do caderno), rola pro topo
+        renderizarQuestoesUI(dados.questoes); renderizarPaginacaoUI(dados.total, parseInt(limit));
         if(document.getElementById('f-mat')) window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch(e) {}
 }
 
-// Histórico de Filtros
 function registrarHistoricoFiltro(f) {
-    let hist = JSON.parse(localStorage.getItem(`histFiltro_${currentUser}`)) || [];
     const rotulo = (f.palavra ? `"${f.palavra}"` : '') + (f.mats.length ? ` [${f.mats.join(', ')}]` : '');
     if(!rotulo.trim()) return;
+    if(historicoUsuario.length > 0 && historicoUsuario[0].rotulo === rotulo) return;
     
-    // Evita duplicata seguida
-    if(hist.length > 0 && hist[0].rotulo === rotulo) return;
-    hist.unshift({ rotulo: rotulo, config: f });
-    if(hist.length > 5) hist.pop();
-    localStorage.setItem(`histFiltro_${currentUser}`, JSON.stringify(hist));
+    historicoUsuario.unshift({ rotulo: rotulo, config: f });
+    if(historicoUsuario.length > 5) historicoUsuario.pop();
+    
+    syncDB('historico', historicoUsuario);
     renderizarHistoricoFiltros();
 }
 
 function renderizarHistoricoFiltros() {
-    let hist = JSON.parse(localStorage.getItem(`histFiltro_${currentUser}`)) || [];
     const ctr1 = document.getElementById('historico-container'); const ctr2 = document.getElementById('historico-container-mobile');
-    const html = hist.length === 0 ? '<span class="text-xs text-gray-400">Nenhum histórico</span>' : hist.map((h, i) => `<button onclick="aplicarHistorico(${i})" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-3 py-1.5 rounded-full border border-gray-200 transition whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px] inline-block" title="${h.rotulo}">⏰ ${h.rotulo}</button>`).join('');
+    const html = historicoUsuario.length === 0 ? '<span class="text-xs text-gray-400">Nenhum histórico</span>' : historicoUsuario.map((h, i) => `<button onclick="aplicarHistorico(${i})" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-3 py-1.5 rounded-full border border-gray-200 transition whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px] inline-block" title="${h.rotulo}">⏰ ${h.rotulo}</button>`).join('');
     if(ctr1) ctr1.innerHTML = html; if(ctr2) ctr2.innerHTML = html;
 }
 
 function aplicarHistorico(index) {
-    let hist = JSON.parse(localStorage.getItem(`histFiltro_${currentUser}`)) || [];
-    if(!hist[index]) return;
-    const conf = hist[index].config;
-    // Opcional: recriar visualmente a seleção, mas por complexidade, vamos aplicar o fetch direto e atualizar a barra de busca
+    if(!historicoUsuario[index]) return; const conf = historicoUsuario[index].config;
     if(document.getElementById('f-busca')) document.getElementById('f-busca').value = conf.palavra || "";
-    // Dispara o payload direto
     const payload = { pagina: 1, limite: document.getElementById('limite-pagina') ? parseInt(document.getElementById('limite-pagina').value) : 20, materia: conf.mats, assunto: conf.asss, subassunto: conf.subs, palavraChave: conf.palavra };
-    fetch('/api/questoes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) })
-    .then(res => res.json()).then(dados => {
+    fetch('/api/questoes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }).then(res => res.json()).then(dados => {
         if(document.getElementById('aviso-aleatorio')) document.getElementById('aviso-aleatorio').classList.add('hidden');
         renderizarQuestoesUI(dados.questoes); renderizarPaginacaoUI(dados.total, payload.limite);
     });
@@ -213,179 +190,93 @@ function aplicarHistorico(index) {
 // ==========================================
 // 5. SISTEMA DE CADERNOS DE QUESTÕES
 // ==========================================
-function abrirModalCaderno() {
-    // Mostra o Modal
-    document.getElementById('modal-caderno').classList.replace('hidden', 'flex');
-    // Trava o scroll do fundo da tela
-    document.body.classList.add('overflow-hidden');
-}
-
-function fecharModalCaderno() {
-    // Esconde o Modal
-    document.getElementById('modal-caderno').classList.replace('flex', 'hidden');
-    // Libera o scroll do fundo da tela
-    document.body.classList.remove('overflow-hidden');
-    // Limpa os campos
-    document.getElementById('nome-caderno').value = ""; 
-    document.getElementById('qtd-caderno').value = "";
-}
+function abrirModalCaderno() { document.getElementById('modal-caderno').classList.replace('hidden', 'flex'); document.body.classList.add('overflow-hidden'); }
+function fecharModalCaderno() { document.getElementById('modal-caderno').classList.replace('flex', 'hidden'); document.body.classList.remove('overflow-hidden'); document.getElementById('nome-caderno').value = ""; document.getElementById('qtd-caderno').value = ""; }
 
 async function salvarCaderno() {
-    const nome = document.getElementById('nome-caderno').value.trim();
-    const qtd = parseInt(document.getElementById('qtd-caderno').value);
-    if(!nome || !qtd || qtd <= 0) return alert("Preencha nome e uma quantidade válida.");
-
+    const nome = document.getElementById('nome-caderno').value.trim(); const qtd = parseInt(document.getElementById('qtd-caderno').value);
+    if(!nome || !qtd || qtd <= 0) return alert("Preencha nome e quantidade válida.");
     const mats = getSelectedValues('f-mat'); const asss = getSelectedValues('f-ass'); const subs = getSelectedValues('f-sub');
     const palavra = document.getElementById('f-busca') ? document.getElementById('f-busca').value.trim() : "";
-    
     const payload = { pagina: 1, limite: 10000, materia: mats, assunto: asss, subassunto: subs, palavraChave: palavra };
     
     try {
         const res = await fetch('/api/questoes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
         const dados = await res.json();
-        
-        if (dados.questoes.length === 0) return alert("Nenhuma questão encontrada nesse filtro para criar o caderno.");
+        if (dados.questoes.length === 0) return alert("Nenhuma questão encontrada para criar o caderno.");
         
         let sorteio = dados.questoes.sort(() => 0.5 - Math.random()).slice(0, qtd);
-        
-        let cadernos = JSON.parse(localStorage.getItem(`cadernos_${currentUser}`)) || [];
-        cadernos.push({
-            id: Date.now().toString(),
-            nome: nome,
-            data: new Date().toLocaleDateString('pt-BR'),
-            questoes: sorteio
-        });
-        localStorage.setItem(`cadernos_${currentUser}`, JSON.stringify(cadernos));
-        
-        fecharModalCaderno();
-        alert(`Caderno "${nome}" criado com sucesso! Acesse a aba Cadernos na barra lateral.`);
+        cadernosUsuario.push({ id: Date.now().toString(), nome: nome, data: new Date().toLocaleDateString('pt-BR'), questoes: sorteio });
+        syncDB('cadernos', cadernosUsuario);
+        fecharModalCaderno(); alert(`Caderno "${nome}" criado com sucesso! Acesse a aba Cadernos.`);
     } catch(e) { alert("Erro ao criar caderno."); }
 }
-function renderizarListaCadernos() {
-    const container = document.getElementById('lista-cadernos');
-    if(!container) return;
-    let cadernos = JSON.parse(localStorage.getItem(`cadernos_${currentUser}`)) || [];
-    
-    if (cadernos.length === 0) {
-        container.innerHTML = `<div class="col-span-full p-10 bg-white rounded-2xl text-center text-gray-400 border border-dashed border-gray-300">Você ainda não tem cadernos salvos. Crie um na aba de Questões.</div>`;
-        return;
-    }
 
-    container.innerHTML = cadernos.map(c => `
+function renderizarListaCadernos() {
+    const container = document.getElementById('lista-cadernos'); if(!container) return;
+    if (cadernosUsuario.length === 0) { container.innerHTML = `<div class="col-span-full p-10 bg-white rounded-2xl text-center text-gray-400 border border-dashed border-gray-300">Você não tem cadernos salvos. Crie um na aba de Questões.</div>`; return; }
+    container.innerHTML = cadernosUsuario.map(c => `
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:border-green-300 transition">
-            <h3 class="text-xl font-bold text-gray-900 mb-1">${c.nome}</h3>
-            <p class="text-xs text-gray-400 font-medium mb-4">Criado em ${c.data} • ${c.questoes.length} questões</p>
-            <div class="mt-auto flex gap-2">
-                <button onclick="abrirCaderno('${c.id}')" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-xl text-sm transition">Resolver</button>
-                <button onclick="excluirCaderno('${c.id}')" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold px-3 py-2 rounded-xl text-sm transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-            </div>
-        </div>
-    `).reverse().join('');
+            <h3 class="text-xl font-bold text-gray-900 mb-1">${c.nome}</h3><p class="text-xs text-gray-400 font-medium mb-4">Criado em ${c.data} • ${c.questoes.length} questões</p>
+            <div class="mt-auto flex gap-2"><button onclick="abrirCaderno('${c.id}')" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-xl text-sm transition">Resolver</button><button onclick="excluirCaderno('${c.id}')" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold px-3 py-2 rounded-xl text-sm transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></div>
+        </div>`).reverse().join('');
 }
 
 function abrirCaderno(id) {
-    let cadernos = JSON.parse(localStorage.getItem(`cadernos_${currentUser}`)) || [];
-    let cad = cadernos.find(c => c.id === id);
-    if(!cad) return;
-    
-    document.getElementById('lista-cadernos').classList.add('hidden');
-    document.getElementById('caderno-ativo-container').classList.remove('hidden');
+    let cad = cadernosUsuario.find(c => c.id === id); if(!cad) return;
+    document.getElementById('lista-cadernos').classList.add('hidden'); document.getElementById('caderno-ativo-container').classList.remove('hidden');
     document.getElementById('titulo-caderno-ativo').innerText = `Resolvendo: ${cad.nome}`;
-    
-    // Usa o mesmo renderizador mestre das questões
-    renderizarQuestoesUI(cad.questoes);
-    // Limpa a paginação pois o caderno exibe todas de uma vez
-    if(document.getElementById('paginacao-container')) document.getElementById('paginacao-container').innerHTML = '';
+    renderizarQuestoesUI(cad.questoes); if(document.getElementById('paginacao-container')) document.getElementById('paginacao-container').innerHTML = '';
 }
 
-function fecharCaderno() {
-    document.getElementById('lista-cadernos').classList.remove('hidden');
-    document.getElementById('caderno-ativo-container').classList.add('hidden');
-    document.getElementById('questoes-container').innerHTML = '';
-}
-
+function fecharCaderno() { document.getElementById('lista-cadernos').classList.remove('hidden'); document.getElementById('caderno-ativo-container').classList.add('hidden'); document.getElementById('questoes-container').innerHTML = ''; }
 function excluirCaderno(id) {
     if(!confirm("Deseja apagar este caderno?")) return;
-    let cadernos = JSON.parse(localStorage.getItem(`cadernos_${currentUser}`)) || [];
-    cadernos = cadernos.filter(c => c.id !== id);
-    localStorage.setItem(`cadernos_${currentUser}`, JSON.stringify(cadernos));
-    renderizarListaCadernos();
+    cadernosUsuario = cadernosUsuario.filter(c => c.id !== id);
+    syncDB('cadernos', cadernosUsuario); renderizarListaCadernos();
 }
-
 
 // ==========================================
 // 6. RENDERIZAÇÃO DAS QUESTÕES (MESTRE)
 // ==========================================
 function renderizarQuestoesUI(questoes) {
-    const container = document.getElementById('questoes-container');
-    if(!container) return;
-    container.innerHTML = '';
-    
-    if(!questoes || questoes.length === 0) { 
-        container.innerHTML = '<div class="p-8 bg-white rounded-2xl text-center text-gray-500">Nenhuma questão encontrada.</div>'; 
-        return; 
-    }
+    const container = document.getElementById('questoes-container'); if(!container) return; container.innerHTML = '';
+    if(!questoes || questoes.length === 0) { container.innerHTML = '<div class="p-8 bg-white rounded-2xl text-center text-gray-500">Nenhuma questão encontrada.</div>'; return; }
 
     questoes.forEach((q, idx) => {
-        const status = progressoUsuario[q.id];
-        let tag = '';
+        const status = progressoUsuario[q.id]; let tag = '';
         if (status && status.timestamp && ((Date.now() - status.timestamp) / 3600000 >= 1)) {
-            const cor = status.acertou ? 'bg-green-500' : 'bg-red-500';
-            tag = `<div class="absolute -top-3 right-4 md:right-10 ${cor} text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-fade-in">${status.acertou ? 'Correta' : 'Incorreta'}</div>`;
+            const cor = status.acertou ? 'bg-green-500' : 'bg-red-500'; tag = `<div class="absolute -top-3 right-4 md:right-10 ${cor} text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-fade-in">${status.acertou ? 'Correta' : 'Incorreta'}</div>`;
         }
 
         let textoEnunciado = q.enunciado.replace(/^Enunciado\s*:\s*/i, '');
-
         let alts = `<div class="mt-5 space-y-3 w-full" id="alts-${q.id}">`;
         q.alternativas.forEach(alt => {
             const letra = alt.charAt(0);
             let btnClasses = "w-full text-justify p-4 border rounded-xl transition-all duration-300 text-base md:text-lg break-words ";
-            
             if (status) {
                 btnClasses += "cursor-not-allowed opacity-80 ";
                 if (letra === q.gabarito_letra) btnClasses += "bg-green-50 border-green-400 text-green-900 font-bold "; 
                 else if (!status.acertou && status.escolhida === letra) btnClasses += "bg-red-50 border-red-300 text-red-900 "; 
                 else btnClasses += "bg-gray-50 border-gray-200 text-gray-500 "; 
             } else { btnClasses += "bg-gray-50 border-gray-200 hover:border-green-300 hover:bg-white text-gray-800 "; }
-            
             alts += `<button id="btn-${q.id}-${letra}" ${status ? 'disabled' : ''} onclick="responderMestre('${q.id}', '${letra}', '${q.gabarito_letra}')" class="${btnClasses}">${alt}</button>`;
         });
         alts += `</div>`;
 
         const iconeBandeira = `<svg class="w-6 h-6 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path></svg>`;
-        const btnReport = `<button onclick="document.getElementById('report-box-${q.id}').classList.toggle('hidden')" class="text-gray-300 hover:text-red-500 transition p-2" title="Reportar erro nesta questão">${iconeBandeira}</button>`;
-        const boxReport = `
-            <div id="report-box-${q.id}" class="hidden mt-4 p-4 bg-red-50 border border-red-100 rounded-xl animate-fade-in w-full">
-                <p class="text-xs font-bold text-red-700 mb-2 uppercase tracking-wide">Reportar Problema</p>
-                <textarea id="texto-report-${q.id}" rows="2" class="w-full p-3 rounded-lg border border-red-200 text-base outline-none focus:ring-2 focus:ring-red-400 resize-none" placeholder="Ex: Gabarito incorreto, falta de imagem..."></textarea>
-                <div class="flex justify-end gap-3 mt-3">
-                    <button onclick="document.getElementById('report-box-${q.id}').classList.add('hidden')" class="text-base text-gray-500 hover:underline px-2">Cancelar</button>
-                    <button onclick="enviarReporte('${q.id}')" class="text-base bg-red-500 hover:bg-red-600 text-white font-bold px-5 py-2 rounded-lg transition">Enviar</button>
-                </div>
-            </div>`;
-
-        const btnRes = `<div class="flex justify-between items-center mt-5 w-full">
-                            <button onclick="mostrarResolucao('${q.id}', false)" class="text-blue-600 text-base md:text-lg font-bold hover:underline p-2 -ml-2">Ver Resolução</button>
-                            ${btnReport}
-                        </div>`;
+        const btnReport = `<button onclick="document.getElementById('report-box-${q.id}').classList.toggle('hidden')" class="text-gray-300 hover:text-red-500 transition p-2" title="Reportar erro">${iconeBandeira}</button>`;
+        const boxReport = `<div id="report-box-${q.id}" class="hidden mt-4 p-4 bg-red-50 border border-red-100 rounded-xl animate-fade-in w-full"><p class="text-xs font-bold text-red-700 mb-2 uppercase tracking-wide">Reportar Problema</p><textarea id="texto-report-${q.id}" rows="2" class="w-full p-3 rounded-lg border border-red-200 text-base outline-none focus:ring-2 focus:ring-red-400 resize-none" placeholder="Ex: Gabarito incorreto..."></textarea><div class="flex justify-end gap-3 mt-3"><button onclick="document.getElementById('report-box-${q.id}').classList.add('hidden')" class="text-base text-gray-500 hover:underline px-2">Cancelar</button><button onclick="enviarReporte('${q.id}')" class="text-base bg-red-500 hover:bg-red-600 text-white font-bold px-5 py-2 rounded-lg transition">Enviar</button></div></div>`;
+        const btnRes = `<div class="flex justify-between items-center mt-5 w-full"><button onclick="mostrarResolucao('${q.id}', false)" class="text-blue-600 text-base md:text-lg font-bold hover:underline p-2 -ml-2">Ver Resolução</button>${btnReport}</div>`;
         const comHtml = `<div id="com-${q.id}" class="hidden mt-4 p-5 bg-blue-50 border border-blue-100 rounded-xl text-justify animate-fade-in w-full"><p class="font-black text-blue-900 mb-2 text-base md:text-lg">Gabarito: ${q.gabarito_letra}</p><p class="text-gray-800 leading-relaxed text-base break-words">${q.comentario}</p></div>`;
 
-        container.innerHTML += `
-            <div class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-100 mb-6 relative w-full overflow-hidden">
-                ${tag}
-                <div class="text-xs text-gray-400 mb-3 font-bold tracking-widest uppercase break-words leading-relaxed">${q.temas_dinamicos.join(' • ')}</div>
-                <p class="text-base md:text-lg text-justify leading-relaxed font-bold text-gray-900 break-words">${textoEnunciado}</p>
-                ${alts}
-                ${btnRes}
-                ${boxReport}
-                ${comHtml}
-            </div>`;
+        container.innerHTML += `<div class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-100 mb-6 relative w-full overflow-hidden">${tag}<div class="text-xs text-gray-400 mb-3 font-bold tracking-widest uppercase break-words leading-relaxed">${q.temas_dinamicos.join(' • ')}</div><p class="text-base md:text-lg text-justify leading-relaxed font-bold text-gray-900 break-words">${textoEnunciado}</p>${alts}${btnRes}${boxReport}${comHtml}</div>`;
     });
 }
 
 function responderMestre(id, escolhida, correta) {
     progressoUsuario[id] = { acertou: (escolhida === correta), escolhida: escolhida, timestamp: Date.now() };
-    localStorage.setItem(`progresso_${currentUser}`, JSON.stringify(progressoUsuario));
+    syncDB('progresso', progressoUsuario);
     
     const container = document.getElementById(`alts-${id}`);
     const botoes = container.getElementsByTagName('button');
@@ -403,7 +294,7 @@ function mostrarResolucao(id, autoAberta = false) {
     const box = document.getElementById(`com-${id}`); if (box) box.classList.remove('hidden');
     if (!autoAberta && !progressoUsuario[id]) {
         progressoUsuario[id] = { acertou: false, escolhida: '-', timestamp: Date.now() }; 
-        localStorage.setItem(`progresso_${currentUser}`, JSON.stringify(progressoUsuario));
+        syncDB('progresso', progressoUsuario);
         const botoes = document.getElementById(`alts-${id}`).children;
         for (let b of botoes) { b.disabled = true; b.classList.add('opacity-50', 'cursor-not-allowed'); b.classList.remove('hover:border-green-300', 'hover:bg-white'); }
         atualizarNumerosEstatisticas();
@@ -414,7 +305,7 @@ async function enviarReporte(id) {
     const tb = document.getElementById(`texto-report-${id}`); const motivo = tb.value.trim();
     if (!motivo) return alert("Descreva o erro.");
     try { await fetch('/api/reportar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: id, motivo: motivo, usuario: currentUser }) });
-        document.getElementById(`report-box-${id}`).classList.add('hidden'); tb.value = ''; alert("Erro reportado!");
+        document.getElementById(`report-box-${id}`).classList.add('hidden'); tb.value = ''; alert("Erro reportado na nuvem!");
     } catch(e) {}
 }
 
@@ -445,7 +336,7 @@ function renderizarPaginacaoUI(total, limit) {
 async function gerarPDF() {
     alert("Iniciando geração do PDF...");
     const { jsPDF } = window.jspdf; const doc = new jsPDF();
-    const payload = { pagina: 1, limite: 100, materia: document.getElementById('f-mat') ? document.getElementById('f-mat').value : 'Todos' };
+    const payload = { pagina: 1, limite: 100, materia: getSelectedValues('f-mat') };
     const res = await fetch('/api/questoes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
     const dados = await res.json();
     let y = 20; let gabaritoArr = [];
@@ -464,9 +355,20 @@ async function gerarPDF() {
 }
 
 // ==========================================
-// 7. INICIALIZAÇÃO
+// 7. INICIALIZAÇÃO E RESGATE DO FIREBASE
 // ==========================================
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    // Ao abrir o site, puxa o progresso salvo na nuvem antes de desenhar a tela
+    if (currentUser !== 'visitante') {
+        try {
+            const res = await fetch(`/api/sync/${currentUser}`);
+            const data = await res.json();
+            progressoUsuario = data.progresso || {};
+            cadernosUsuario = data.cadernos || [];
+            historicoUsuario = data.historico || [];
+        } catch(e) { console.error("Erro ao puxar dados da nuvem", e); }
+    }
+
     atualizarNumerosEstatisticas();
     if(document.getElementById('sidebar-avatar') && currentUser) document.getElementById('sidebar-avatar').innerText = currentUser.charAt(0).toUpperCase();
 
@@ -474,5 +376,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('admin-panel').classList.remove('hidden');
         carregarPainelAdmin(); carregarLogsServidor(); setInterval(carregarLogsServidor, 3000); 
     }
+    
     if(document.getElementById('f-mat')) { carregarFiltros().then(() => aplicarFiltros(1)); }
+    if(document.getElementById('lista-cadernos')) { renderizarListaCadernos(); }
 });
