@@ -214,7 +214,20 @@ function aplicarHistorico(index) {
 // 5. SISTEMA DE CADERNOS DE QUESTÕES
 // ==========================================
 function abrirModalCaderno() {
+    // Mostra o Modal
     document.getElementById('modal-caderno').classList.replace('hidden', 'flex');
+    // Trava o scroll do fundo da tela
+    document.body.classList.add('overflow-hidden');
+}
+
+function fecharModalCaderno() {
+    // Esconde o Modal
+    document.getElementById('modal-caderno').classList.replace('flex', 'hidden');
+    // Libera o scroll do fundo da tela
+    document.body.classList.remove('overflow-hidden');
+    // Limpa os campos
+    document.getElementById('nome-caderno').value = ""; 
+    document.getElementById('qtd-caderno').value = "";
 }
 
 async function salvarCaderno() {
@@ -233,7 +246,6 @@ async function salvarCaderno() {
         
         if (dados.questoes.length === 0) return alert("Nenhuma questão encontrada nesse filtro para criar o caderno.");
         
-        // Embaralha e corta a quantidade
         let sorteio = dados.questoes.sort(() => 0.5 - Math.random()).slice(0, qtd);
         
         let cadernos = JSON.parse(localStorage.getItem(`cadernos_${currentUser}`)) || [];
@@ -245,12 +257,10 @@ async function salvarCaderno() {
         });
         localStorage.setItem(`cadernos_${currentUser}`, JSON.stringify(cadernos));
         
-        document.getElementById('modal-caderno').classList.replace('flex', 'hidden');
-        document.getElementById('nome-caderno').value = ""; document.getElementById('qtd-caderno').value = "";
+        fecharModalCaderno();
         alert(`Caderno "${nome}" criado com sucesso! Acesse a aba Cadernos na barra lateral.`);
     } catch(e) { alert("Erro ao criar caderno."); }
 }
-
 function renderizarListaCadernos() {
     const container = document.getElementById('lista-cadernos');
     if(!container) return;
