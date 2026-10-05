@@ -8,16 +8,16 @@
     <style>
         .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        /* Scroll elegante para caixas de seleção múltipla */
         select[multiple]::-webkit-scrollbar { width: 6px; }
         select[multiple]::-webkit-scrollbar-track { background: #f3f4f6; }
         select[multiple]::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-gray-50 font-sans text-gray-800 pb-24 md:pb-10 overflow-x-hidden">
+<body class="bg-gray-50 font-sans text-gray-800 pb-24 md:pb-10 overflow-x-hidden relative">
     
     {% include 'sidebar.html' %}
     
+    <!-- CONTEÚDO PRINCIPAL -->
     <div class="px-4 pt-6 md:pl-32 md:pt-10 md:pr-10 max-w-6xl mx-auto animate-fade-in-up">
         
         <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
@@ -32,7 +32,6 @@
 
         <!-- Filtros e Pesquisa -->
         <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
-            <!-- Barra de Busca -->
             <div class="mb-4">
                 <input type="text" id="f-busca" placeholder="Pesquisar palavra-chave nas questões ou alternativas..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm md:text-base font-medium">
             </div>
@@ -52,31 +51,12 @@
                     <button onclick="abrirModalCaderno()" class="p-3 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 rounded-xl font-bold transition shadow-sm" title="Salvar como Caderno">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm1 2h10v4H5V5zm8 4H7V6h6v3z"></path></svg>
                     </button>
-                    <!-- Botão Filtrar -->
                     <button onclick="aplicarFiltros(1)" class="flex-1 md:flex-none px-8 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition shadow-sm text-sm md:text-base">Aplicar Filtros</button>
                 </div>
                 
-                <!-- Histórico de Filtros -->
-                <div class="w-full md:w-auto overflow-x-auto whitespace-nowrap py-1 hidden md:flex items-center gap-2" id="historico-container">
-                    <!-- Preenchido via JS -->
-                </div>
+                <div class="w-full md:w-auto overflow-x-auto whitespace-nowrap py-1 hidden md:flex items-center gap-2" id="historico-container"></div>
             </div>
-            <!-- Histórico Mobile -->
             <div class="w-full overflow-x-auto whitespace-nowrap mt-3 py-1 flex md:hidden items-center gap-2" id="historico-container-mobile"></div>
-        </div>
-
-        <!-- Modal de Criação de Caderno -->
-        <div id="modal-caderno" class="fixed inset-0 bg-gray-900/60 z-[200] hidden items-center justify-center p-4">
-            <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-fade-in-up">
-                <h3 class="text-xl font-black text-gray-900 mb-2">Criar Caderno</h3>
-                <p class="text-sm text-gray-500 mb-4">Será gerado com base no seu filtro e pesquisa atual.</p>
-                <input type="text" id="nome-caderno" placeholder="Nome do Caderno (Ex: Revisão Cardio)" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500 mb-3 font-medium">
-                <input type="number" id="qtd-caderno" placeholder="Qtd. de Questões (Ex: 30)" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500 mb-6 font-medium">
-                <div class="flex gap-3">
-                    <button onclick="document.getElementById('modal-caderno').classList.replace('flex', 'hidden')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Cancelar</button>
-                    <button onclick="salvarCaderno()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition">Salvar Caderno</button>
-                </div>
-            </div>
         </div>
 
         <div id="aviso-aleatorio" class="bg-blue-50 border border-blue-200 p-4 md:p-6 rounded-2xl mb-6 flex flex-col md:flex-row items-start gap-4">
@@ -92,7 +72,26 @@
         <div id="questoes-container"></div>
         <div id="paginacao-container" class="flex flex-wrap justify-center gap-2 mt-6 mb-8"></div>
     </div>
-    
-    <script src="/static/app.js?v=3001"></script>
+
+    <!-- ========================================================= -->
+    <!-- MODAL DE CADERNO (AGORA FORA DE TUDO E COBRINDO A TELA) -->
+    <!-- ========================================================= -->
+    <div id="modal-caderno" class="fixed inset-0 w-full h-full bg-gray-900/80 z-[999] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-fade-in-up">
+            <h3 class="text-xl font-black text-gray-900 mb-2">Criar Caderno</h3>
+            <p class="text-sm text-gray-500 mb-4">Será gerado com base no seu filtro e pesquisa atual.</p>
+            
+            <input type="text" id="nome-caderno" placeholder="Nome do Caderno (Ex: Revisão Cardio)" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500 mb-3 font-medium">
+            <input type="number" id="qtd-caderno" placeholder="Qtd. de Questões (Ex: 30)" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500 mb-6 font-medium">
+            
+            <div class="flex gap-3">
+                <button onclick="fecharModalCaderno()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Cancelar</button>
+                <button onclick="salvarCaderno()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script atualizado -->
+    <script src="/static/app.js?v=3005"></script>
 </body>
 </html>
