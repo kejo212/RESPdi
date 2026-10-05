@@ -1,5 +1,5 @@
 // ==========================================
-// 1. PROTEÇÃO DE ROTAS E VARIÁVEIS GLOBAIS
+// 1. PROTEÇAO DE ROTAS E VARIÁVEIS GLOBAIS
 // ==========================================
 let rawUser = localStorage.getItem('currentUser');
 let path = window.location.pathname;
