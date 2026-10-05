@@ -439,7 +439,7 @@ async function gerarPDF() {
 }
 
 // ==========================================
-// 7. INICIALIZAÇÃO E RESGATE DO FIREBASE
+// 7. INICIALIZAÇÃO E e RESGATE DO FIREBASE
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
     // Ao abrir qualquer página logada, puxa o progresso salvo na nuvem
