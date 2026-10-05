@@ -272,7 +272,7 @@ function renderizarListaCadernos() {
     }
     container.innerHTML = cadernosUsuario.map(c => `
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:border-green-300 transition">
-            <h3 class="text-xl font-bold text-gray-900 mb-1">${c.nome}</h3><p class="text-xs text-gray-400 font-medium mb-4">Criado em ${c.data} •${c.questoes.length} questões</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-1">${c.nome}</h3><p class="text-xs text-gray-400 font-medium mb-4">Criado em ${c.data} • ${c.questoes.length} questões</p>
             <div class="mt-auto flex gap-2">
                 <button onclick="abrirCaderno('${c.id}')" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-xl text-sm transition shadow-sm">Resolver</button>
                 <button onclick="excluirCaderno('${c.id}')" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold px-3 py-2 rounded-xl text-sm transition shadow-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
@@ -334,4 +334,135 @@ function renderizarQuestoesUI(questoes) {
 
         const iconeBandeira = `<svg class="w-6 h-6 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path></svg>`;
         const btnReport = `<button onclick="document.getElementById('report-box-${q.id}').classList.toggle('hidden')" class="text-gray-300 hover:text-red-500 transition p-2" title="Reportar erro">${iconeBandeira}</button>`;
-        const boxReport = `<div id="report-box-${q.id}" class="hidden mt-4 p-4 bg-red-50 border border-red-100 rounded-xl animate-fade-in w-full"><p class="text
+        const boxReport = `<div id="report-box-${q.id}" class="hidden mt-4 p-4 bg-red-50 border border-red-100 rounded-xl animate-fade-in w-full"><p class="text-xs font-bold text-red-700 mb-2 uppercase tracking-wide">Reportar Problema</p><textarea id="texto-report-${q.id}" rows="2" class="w-full p-3 rounded-lg border border-red-200 text-base outline-none focus:ring-2 focus:ring-red-400 resize-none shadow-sm" placeholder="Ex: Gabarito incorreto..."></textarea><div class="flex justify-end gap-3 mt-3"><button onclick="document.getElementById('report-box-${q.id}').classList.add('hidden')" class="text-base text-gray-500 hover:underline px-2">Cancelar</button><button onclick="enviarReporte('${q.id}')" class="text-base bg-red-500 hover:bg-red-600 text-white font-bold px-5 py-2 rounded-lg transition shadow-sm">Enviar</button></div></div>`;
+        const btnRes = `<div class="flex justify-between items-center mt-5 w-full"><button onclick="mostrarResolucao('${q.id}', false)" class="text-blue-600 text-base md:text-lg font-bold hover:underline p-2 -ml-2">Ver Resolução</button>${btnReport}</div>`;
+        const comHtml = `<div id="com-${q.id}" class="hidden mt-4 p-5 bg-blue-50 border border-blue-100 rounded-xl text-justify animate-fade-in w-full shadow-sm"><p class="font-black text-blue-900 mb-2 text-base md:text-lg">Gabarito: ${q.gabarito_letra}</p><p class="text-gray-800 leading-relaxed text-base break-words">${q.comentario}</p></div>`;
+
+        container.innerHTML += `<div class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-100 mb-6 relative w-full overflow-hidden">${tag}<div class="text-xs text-gray-400 mb-3 font-bold tracking-widest uppercase break-words leading-relaxed">${q.temas_dinamicos.join(' • ')}</div><p class="text-base md:text-lg text-justify leading-relaxed font-bold text-gray-900 break-words">${textoEnunciado}</p>${alts}${btnRes}${boxReport}${comHtml}</div>`;
+    });
+}
+
+function responderMestre(id, escolhida, correta) {
+    progressoUsuario[id] = { acertou: (escolhida === correta), escolhida: escolhida, timestamp: Date.now() };
+    syncDB('progresso', progressoUsuario);
+    
+    const container = document.getElementById(`alts-${id}`);
+    const botoes = container.getElementsByTagName('button');
+    for (let btn of botoes) {
+        btn.disabled = true; btn.classList.add('cursor-not-allowed', 'opacity-80'); btn.classList.remove('hover:border-green-300', 'hover:bg-white', 'text-gray-800');
+        const letraBtn = btn.id.split('-').pop();
+        if (letraBtn === correta) { btn.classList.add('bg-green-50', 'border-green-400', 'text-green-900', 'font-bold'); btn.classList.remove('bg-gray-50', 'border-gray-200'); }
+        else if (letraBtn === escolhida && escolhida !== correta) { btn.classList.add('bg-red-50', 'border-red-300', 'text-red-900'); btn.classList.remove('bg-gray-50', 'border-gray-200'); }
+        else { btn.classList.add('text-gray-500'); }
+    }
+    mostrarResolucao(id, true); atualizarNumerosEstatisticas();
+}
+
+function mostrarResolucao(id, autoAberta = false) {
+    const box = document.getElementById(`com-${id}`); if (box) box.classList.remove('hidden');
+    if (!autoAberta && !progressoUsuario[id]) {
+        progressoUsuario[id] = { acertou: false, escolhida: '-', timestamp: Date.now() }; 
+        syncDB('progresso', progressoUsuario);
+        const botoes = document.getElementById(`alts-${id}`).children;
+        for (let b of botoes) { b.disabled = true; b.classList.add('opacity-50', 'cursor-not-allowed'); b.classList.remove('hover:border-green-300', 'hover:bg-white'); }
+        atualizarNumerosEstatisticas();
+    }
+}
+
+async function enviarReporte(id) {
+    const tb = document.getElementById(`texto-report-${id}`); const motivo = tb.value.trim();
+    if (!motivo) return alert("Descreva o erro.");
+    try { 
+        await fetch('/api/reportar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: id, motivo: motivo, usuario: currentUser }) });
+        document.getElementById(`report-box-${id}`).classList.add('hidden'); 
+        tb.value = ''; 
+        alert("Erro reportado na nuvem com sucesso!");
+    } catch(e) {}
+}
+
+function atualizarNumerosEstatisticas() {
+    const ids = Object.keys(progressoUsuario); let acertos = 0;
+    ids.forEach(id => { if (progressoUsuario[id].acertou) acertos++; });
+    if(document.getElementById('stat-total')) document.getElementById('stat-total').innerText = ids.length;
+    if(document.getElementById('stat-acertos')) document.getElementById('stat-acertos').innerText = acertos;
+    if(document.getElementById('stat-erros')) document.getElementById('stat-erros').innerText = ids.length - acertos;
+}
+
+function renderizarPaginacaoUI(total, limit) {
+    const container = document.getElementById('paginacao-container'); if(!container) return; container.innerHTML = '';
+    const totalPags = Math.ceil(total / limit); if (totalPags <= 1) return;
+    if (paginaAtual > 1) container.innerHTML += `<button onclick="aplicarFiltros(${paginaAtual - 1})" class="p-2 border rounded hover:bg-gray-50 transition shadow-sm">«</button>`;
+    
+    let mostrouUltima = false;
+    for (let i = 1; i <= totalPags; i++) {
+        if (i <= 3 || i === paginaAtual || i === paginaAtual - 1 || i === paginaAtual + 1) {
+            const active = (i === paginaAtual) ? 'bg-green-600 text-white font-bold' : 'bg-white hover:bg-gray-50 text-gray-700';
+            container.innerHTML += `<button onclick="aplicarFiltros(${i})" class="p-2 border rounded transition shadow-sm ${active}">${i}</button>`;
+        } else if (i === 4 && paginaAtual < 3) { 
+            container.innerHTML += `<span class="px-2 text-gray-400">...</span>`; 
+            mostrouUltima = true; 
+            break;
+        } else if (i > paginaAtual + 1 && i < totalPags) { 
+            if (!mostrouUltima) { 
+                container.innerHTML += `<span class="px-2 text-gray-400">...</span>`; 
+                mostrouUltima = true; 
+            } 
+        }
+    }
+    
+    if (mostrouUltima || paginaAtual < totalPags - 1) container.innerHTML += `<button onclick="aplicarFiltros(${totalPags})" class="p-2 border rounded hover:bg-gray-50 transition shadow-sm">${totalPags}</button>`;
+    if (paginaAtual < totalPags) container.innerHTML += `<button onclick="aplicarFiltros(${paginaAtual + 1})" class="p-2 border rounded hover:bg-gray-50 transition shadow-sm">»</button>`;
+}
+
+async function gerarPDF() {
+    alert("Iniciando geração do PDF...");
+    const { jsPDF } = window.jspdf; const doc = new jsPDF();
+    const payload = { pagina: 1, limite: 100, materia: getSelectedValues('f-mat') };
+    const res = await fetch('/api/questoes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+    const dados = await res.json();
+    
+    let y = 20; let gabaritoArr = [];
+    doc.setFontSize(16); doc.text("RESPdi - Simulado", 10, y); y += 10; doc.setFontSize(10);
+    
+    dados.questoes.forEach((q, idx) => {
+        gabaritoArr.push([idx + 1, q.gabarito_letra]);
+        let textoQuestao = `Questao ${idx + 1}: ${q.enunciado.replace(/^Enunciado\s*:\s*/i, '')}\n`;
+        q.alternativas.forEach(alt => textoQuestao += `${alt}\n`);
+        const lines = doc.splitTextToSize(textoQuestao, 180);
+        if (y + (lines.length * 5) > 280) { doc.addPage(); y = 20; }
+        doc.text(lines, 10, y); y += (lines.length * 5) + 10;
+    });
+    
+    doc.addPage(); doc.text("Gabarito do Simulado", 10, 20);
+    doc.autoTable({ startY: 30, head: [['Questao', 'Alternativa Correta']], body: gabaritoArr });
+    doc.save("Simulado_RESPdi.pdf");
+}
+
+// ==========================================
+// 7. INICIALIZAÇÃO E RESGATE DO FIREBASE
+// ==========================================
+document.addEventListener("DOMContentLoaded", async () => {
+    // Ao abrir qualquer página logada, puxa o progresso salvo na nuvem
+    if (currentUser !== 'visitante') {
+        try {
+            const res = await fetch(`/api/sync/${currentUser}`);
+            const data = await res.json();
+            progressoUsuario = data.progresso || {};
+            cadernosUsuario = data.cadernos || [];
+            historicoUsuario = data.historico || [];
+        } catch(e) { console.error("Erro ao puxar dados da nuvem", e); }
+    }
+
+    atualizarNumerosEstatisticas();
+    if(document.getElementById('sidebar-avatar') && currentUser) {
+        document.getElementById('sidebar-avatar').innerText = currentUser.charAt(0).toUpperCase();
+    }
+
+    if (currentUser === 'davi' && document.getElementById('admin-panel')) {
+        document.getElementById('admin-panel').classList.remove('hidden');
+        carregarPainelAdmin(); carregarLogsServidor(); setInterval(carregarLogsServidor, 3000); 
+    }
+    
+    if(document.getElementById('f-mat')) { carregarFiltros().then(() => aplicarFiltros(1)); }
+    if(document.getElementById('lista-cadernos')) { renderizarListaCadernos(); }
+});
