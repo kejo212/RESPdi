@@ -11,87 +11,117 @@
         select[multiple]::-webkit-scrollbar { width: 6px; }
         select[multiple]::-webkit-scrollbar-track { background: #f3f4f6; }
         select[multiple]::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        /* CSS do Anti-Spoiler (Desfoque Elegante) */
+        .hide-temas .tema-dinamico-badge { filter: blur(5px); opacity: 0.5; user-select: none; transition: all 0.3s ease; }
+        .hide-temas .tema-dinamico-badge:hover { filter: blur(0); opacity: 1; cursor: pointer; }
+        
+        /* CSS do Toggle Switch */
+        .toggle-checkbox:checked { right: 0; border-color: #10B981; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #10B981; }
+        .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
     </style>
 </head>
 <body class="bg-gray-50 font-sans text-gray-800 pb-24 md:pb-10 overflow-x-hidden relative">
     
     {% include 'sidebar.html' %}
     
-    <!-- CONTEÚDO PRINCIPAL -->
     <div class="px-4 pt-6 md:pl-32 md:pt-10 md:pr-10 max-w-6xl mx-auto animate-fade-in-up">
         
-        <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4 border-b border-gray-200 pb-4">
             <div>
-                <h1 class="text-3xl md:text-4xl font-black text-gray-900 mb-1">Simulado</h1>
-                <p class="text-gray-500 text-sm md:text-base">Selecione múltiplos filtros segurando a tecla Ctrl.</p>
+                <h1 class="text-3xl md:text-4xl font-black text-gray-900 mb-1">Simulado Livre</h1>
+                <p class="text-gray-500 text-sm md:text-base">Monte sua bateria de estudos personalizada.</p>
             </div>
-            <button onclick="gerarPDF()" class="bg-red-500 hover:bg-red-600 text-white px-5 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all w-full md:w-auto">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Exportar PDF
-            </button>
+            
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <!-- Toggle Switch: Ocultar Temas -->
+                <label class="flex items-center cursor-pointer bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 w-full md:w-auto justify-between">
+                    <span class="text-sm font-bold text-gray-700 mr-3">Modo Anti-Spoiler</span>
+                    <div class="relative">
+                        <input type="checkbox" id="toggle-temas" class="sr-only" onchange="alternarTemas()">
+                        <div class="block bg-gray-300 w-10 h-6 rounded-full transition toggle-label"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform toggle-dot shadow-sm"></div>
+                    </div>
+                </label>
+            </div>
         </div>
 
         <!-- Filtros e Pesquisa -->
         <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
             <div class="mb-4">
-                <input type="text" id="f-busca" placeholder="Pesquisar palavra-chave nas questões ou alternativas..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm md:text-base font-medium">
+                <input type="text" id="f-busca" placeholder="Pesquisar palavra-chave no enunciado..." class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm md:text-base font-medium transition">
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 mb-5">
+                <select id="f-status" class="w-full h-24 p-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-medium" multiple title="Selecione o Histórico (Opcional)">
+                    <option value="todas" selected>Todos os Status</option>
+                    <option value="ineditas">💡 Apenas Inéditas</option>
+                    <option value="feitas">✅ Já Feitas</option>
+                    <option value="erradas">❌ Apenas Erradas</option>
+                </select>
                 <select id="f-mat" multiple class="w-full h-24 p-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-medium"></select>
                 <select id="f-ass" multiple disabled class="w-full h-24 p-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-medium disabled:opacity-50"></select>
                 <select id="f-sub" multiple disabled class="w-full h-24 p-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-medium disabled:opacity-50"></select>
             </div>
             
-            <div class="flex flex-wrap md:flex-nowrap gap-3 items-center justify-between border-t pt-4">
-                <div class="flex items-center gap-2 w-full md:w-auto">
-                    <select id="limite-pagina" class="w-24 p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none text-sm font-medium">
+            <!-- Barra de Botões Aprimorada -->
+            <div class="flex flex-col md:flex-row gap-3 items-center justify-between border-t border-gray-100 pt-5">
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <select id="limite-pagina" class="w-24 p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none text-sm font-bold text-gray-700 h-12">
                         <option value="20">20/pág</option><option value="50">50/pág</option><option value="100">100/pág</option>
                     </select>
-                    <!-- Botão Salvar Caderno -->
-                    <button onclick="abrirModalCaderno()" class="p-3 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 rounded-xl font-bold transition shadow-sm" title="Salvar como Caderno">
+                    <button onclick="aplicarFiltros(1)" class="flex-1 md:flex-none px-6 py-3 bg-green-600 text-white font-black rounded-xl hover:bg-green-700 transition shadow-sm h-12 text-sm md:text-base tracking-wide">BUSCAR QUESTÕES</button>
+                    
+                    <!-- Novo Botão Salvar Caderno Mais Bonito -->
+                    <button onclick="abrirModalCaderno()" class="px-5 py-3 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 rounded-xl font-bold transition shadow-sm flex items-center gap-2 h-12 border border-yellow-200" title="Criar um Caderno com este Filtro">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm1 2h10v4H5V5zm8 4H7V6h6v3z"></path></svg>
+                        <span class="hidden md:inline">Salvar Caderno</span>
                     </button>
-                    <button onclick="aplicarFiltros(1)" class="flex-1 md:flex-none px-8 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition shadow-sm text-sm md:text-base">Aplicar Filtros</button>
                 </div>
                 
-                <div class="w-full md:w-auto overflow-x-auto whitespace-nowrap py-1 hidden md:flex items-center gap-2" id="historico-container"></div>
+                <button onclick="gerarPDF()" class="text-gray-500 hover:text-red-500 flex items-center gap-1 font-bold text-sm transition h-12 px-2 w-full md:w-auto justify-center">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Exportar PDF
+                </button>
             </div>
-            <div class="w-full overflow-x-auto whitespace-nowrap mt-3 py-1 flex md:hidden items-center gap-2" id="historico-container-mobile"></div>
-        </div>
-
-        <div id="aviso-aleatorio" class="bg-blue-50 border border-blue-200 p-4 md:p-6 rounded-2xl mb-6 flex flex-col md:flex-row items-start gap-4">
-            <div class="bg-blue-100 p-3 rounded-full text-blue-600 self-start hidden md:block">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+            
+            <!-- Histórico Otimizado (Flex Wrap para caber vários) -->
+            <div class="mt-4 border-t border-gray-100 pt-4 hidden md:block">
+                <p class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Filtros Recentes</p>
+                <div class="flex flex-wrap items-center gap-2" id="historico-container"></div>
             </div>
-            <div>
-                <h3 class="text-base md:text-lg font-bold text-blue-900 mb-1">Exploração Aleatória</h3>
-                <p class="text-blue-700 leading-relaxed text-xs md:text-sm">Exibindo 100 questões aleatórias. Use a pesquisa e os filtros acima.</p>
-            </div>
+            <div class="mt-4 flex flex-wrap md:hidden items-center gap-2" id="historico-container-mobile"></div>
         </div>
 
         <div id="questoes-container"></div>
         <div id="paginacao-container" class="flex flex-wrap justify-center gap-2 mt-6 mb-8"></div>
     </div>
 
-    <!-- ========================================================= -->
-    <!-- MODAL DE CADERNO (AGORA FORA DE TUDO E COBRINDO A TELA) -->
-    <!-- ========================================================= -->
+    <!-- Modal Caderno -->
     <div id="modal-caderno" class="fixed inset-0 w-full h-full bg-gray-900/80 z-[999] hidden items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-fade-in-up">
-            <h3 class="text-xl font-black text-gray-900 mb-2">Criar Caderno</h3>
-            <p class="text-sm text-gray-500 mb-4">Será gerado com base no seu filtro e pesquisa atual.</p>
+        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl animate-fade-in-up">
+            <h3 class="text-2xl font-black text-gray-900 mb-2">Criar Caderno</h3>
+            <p class="text-sm text-gray-500 mb-6">Salve os filtros atuais em um caderno definitivo e fixo para revisar depois.</p>
             
-            <input type="text" id="nome-caderno" placeholder="Nome do Caderno (Ex: Revisão Cardio)" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500 mb-3 font-medium">
-            <input type="number" id="qtd-caderno" placeholder="Qtd. de Questões (Ex: 30)" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500 mb-6 font-medium">
+            <input type="text" id="nome-caderno" placeholder="Nome do Caderno (Ex: Erros de Cardio)" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 mb-3 font-medium text-gray-800 shadow-inner">
+            <input type="number" id="qtd-caderno" placeholder="Quantidade de Questões (Ex: 30)" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 mb-6 font-medium text-gray-800 shadow-inner">
             
             <div class="flex gap-3">
-                <button onclick="fecharModalCaderno()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Cancelar</button>
-                <button onclick="salvarCaderno()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition">Salvar</button>
+                <button onclick="fecharModalCaderno()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-4 rounded-xl transition">Cancelar</button>
+                <button id="btn-salvar-caderno" onclick="salvarCaderno()" class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-black py-4 rounded-xl transition shadow-md">Criar Caderno</button>
             </div>
         </div>
     </div>
 
-    <!-- Script atualizado -->
-    <script src="/static/app.js?v=3005"></script>
+    <script src="/static/app.js?v=5001"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if(localStorage.getItem('hideTemas') === 'true') {
+                document.getElementById('toggle-temas').checked = true;
+                document.body.classList.add('hide-temas');
+                document.querySelector('.toggle-dot').style.transform = 'translateX(100%)';
+            }
+        });
+    </script>
 </body>
 </html>
