@@ -48,8 +48,12 @@ for caminho_arquivo in arquivos_json:
     except: pass
 
 # ==========================================
-# 3. GESTÃO DE USUÁRIOS
+# 3. CONFIGURAÇÕES GLOBAIS E USUÁRIOS
 # ==========================================
+SISTEMA_CONFIG = fb_get('config')
+if not isinstance(SISTEMA_CONFIG, dict):
+    SISTEMA_CONFIG = {"ocultar_incompletas": False}
+
 def carregar_usuarios():
     db = fb_get('usuarios')
     if not db: 
@@ -89,11 +93,8 @@ def login():
         if db[user]['status'] == 'pendente': return jsonify({"erro": "Cadastro em análise pelo Davi."}), 403
         if db[user]['status'] == 'negado': return jsonify({"erro": "Cadastro negado."}), 403
         if db[user]['status'] == 'bloqueado': return jsonify({"erro": "Conta bloqueada."}), 403
-        
-        # Registra o último acesso
         db[user]['ultimo_acesso'] = datetime.now().strftime("%d/%m/%Y %H:%M")
         salvar_usuarios(db)
-        
         return jsonify({"sucesso": True, "admin": user == 'davi'})
     return jsonify({"erro": "Usuário ou senha incorretos."}), 401
 
@@ -138,30 +139,36 @@ def excluir_usuario():
 @app.route('/api/admin/logs', methods=['GET'])
 def obter_logs(): return jsonify(sys_logs)
 
-# NOVAS ROTAS DO PAINEL ADMIN AVANÇADO
+# ROTAS DA CONFIGURAÇÃO GLOBAL DO DAVI
+@app.route('/api/admin/config', methods=['POST'])
+def update_config():
+    global SISTEMA_CONFIG
+    dados = request.json
+    if dados.get('username') != 'davi': return jsonify({"erro": "Não autorizado"}), 403
+    SISTEMA_CONFIG['ocultar_incompletas'] = dados.get('ocultar_incompletas', False)
+    fb_put('config', SISTEMA_CONFIG)
+    registrar_log(f"ADMIN: Ocultar Incompletas = {SISTEMA_CONFIG['ocultar_incompletas']}")
+    return jsonify({"sucesso": True})
+
+@app.route('/api/config', methods=['GET'])
+def get_config(): return jsonify(SISTEMA_CONFIG)
+
 @app.route('/api/admin/estatisticas_usuarios', methods=['GET'])
 def estatisticas_usuarios():
     db_users = carregar_usuarios()
-    all_userdata = fb_get('userdata') # Puxa todos os progressos de uma vez para não travar
+    all_userdata = fb_get('userdata') 
     stats = []
     for u, info in db_users.items():
         if u == 'davi': continue
         q_respondidas = 0
-        if all_userdata and u in all_userdata and 'progresso' in all_userdata[u]:
-            q_respondidas = len(all_userdata[u]['progresso'])
-        stats.append({
-            "usuario": u,
-            "status": info.get('status', 'pendente'),
-            "ultimo_acesso": info.get('ultimo_acesso', 'Nunca'),
-            "questoes_respondidas": q_respondidas
-        })
+        if all_userdata and u in all_userdata and 'progresso' in all_userdata[u]: q_respondidas = len(all_userdata[u]['progresso'])
+        stats.append({ "usuario": u, "status": info.get('status', 'pendente'), "ultimo_acesso": info.get('ultimo_acesso', 'Nunca'), "questoes_respondidas": q_respondidas })
     return jsonify(stats)
 
 @app.route('/api/admin/reportes', methods=['GET'])
 def admin_reportes():
     reps = fb_get('reportes')
-    if isinstance(reps, dict):
-        return jsonify([v for k, v in reps.items()])
+    if isinstance(reps, dict): return jsonify([v for k, v in reps.items()])
     return jsonify([])
 
 @app.route('/api/sync/<user>', methods=['GET'])
@@ -204,8 +211,18 @@ def obter_questoes():
         asss = ass_raw if isinstance(ass_raw, list) else ([ass_raw] if ass_raw and ass_raw != 'Todos' else [])
         subs = sub_raw if isinstance(sub_raw, list) else ([sub_raw] if sub_raw and sub_raw != 'Todos' else [])
         
+        ocultar_incompletas = SISTEMA_CONFIG.get("ocultar_incompletas", False)
         filtradas = []
+        
         for q in banco_questoes:
+            # --- REGRA DO ADMIN: PENTE FINO DE QUALIDADE ---
+            if ocultar_incompletas:
+                gab = str(q.get("gabarito_letra", "")).strip().upper()
+                com = str(q.get("comentario", "")).strip().lower()
+                sem_gab = not gab or gab == 'X' or gab == 'NULA'
+                sem_com = not com or 'sem coment' in com or com == 'null' or com == 'none'
+                if sem_gab or sem_com: continue # Pula essa questão
+            
             q_id = str(q.get("id", "X"))
             if status_prog == 'ineditas' and q_id in feitas: continue
             if status_prog == 'feitas' and q_id not in feitas: continue
