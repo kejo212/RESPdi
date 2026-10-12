@@ -89,6 +89,11 @@ def login():
         if db[user]['status'] == 'pendente': return jsonify({"erro": "Cadastro em análise pelo Davi."}), 403
         if db[user]['status'] == 'negado': return jsonify({"erro": "Cadastro negado."}), 403
         if db[user]['status'] == 'bloqueado': return jsonify({"erro": "Conta bloqueada."}), 403
+        
+        # Registra o último acesso
+        db[user]['ultimo_acesso'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+        salvar_usuarios(db)
+        
         return jsonify({"sucesso": True, "admin": user == 'davi'})
     return jsonify({"erro": "Usuário ou senha incorretos."}), 401
 
@@ -99,7 +104,7 @@ def cadastro():
     user = dados.get('username', '').strip()
     if any(c in user for c in ['.', '$', '#', '[', ']', '/']): return jsonify({"erro": "O nome não pode conter pontos ou símbolos especiais."}), 400
     if user in db: return jsonify({"erro": "Usuário já existe."}), 400
-    db[user] = {"senha": dados.get('password'), "status": "pendente", "tags": dados.get('tags', [])}
+    db[user] = {"senha": dados.get('password'), "status": "pendente", "tags": dados.get('tags', []), "ultimo_acesso": "Nunca"}
     if not fb_put('usuarios', db): return jsonify({"erro": "Erro no Firebase."}), 500
     return jsonify({"sucesso": True})
 
@@ -133,9 +138,34 @@ def excluir_usuario():
 @app.route('/api/admin/logs', methods=['GET'])
 def obter_logs(): return jsonify(sys_logs)
 
+# NOVAS ROTAS DO PAINEL ADMIN AVANÇADO
+@app.route('/api/admin/estatisticas_usuarios', methods=['GET'])
+def estatisticas_usuarios():
+    db_users = carregar_usuarios()
+    all_userdata = fb_get('userdata') # Puxa todos os progressos de uma vez para não travar
+    stats = []
+    for u, info in db_users.items():
+        if u == 'davi': continue
+        q_respondidas = 0
+        if all_userdata and u in all_userdata and 'progresso' in all_userdata[u]:
+            q_respondidas = len(all_userdata[u]['progresso'])
+        stats.append({
+            "usuario": u,
+            "status": info.get('status', 'pendente'),
+            "ultimo_acesso": info.get('ultimo_acesso', 'Nunca'),
+            "questoes_respondidas": q_respondidas
+        })
+    return jsonify(stats)
+
+@app.route('/api/admin/reportes', methods=['GET'])
+def admin_reportes():
+    reps = fb_get('reportes')
+    if isinstance(reps, dict):
+        return jsonify([v for k, v in reps.items()])
+    return jsonify([])
+
 @app.route('/api/sync/<user>', methods=['GET'])
 def get_user_data(user): return jsonify(fb_get(f'userdata/{user}'))
-
 @app.route('/api/sync/<user>', methods=['POST'])
 def update_user_data(user):
     payload = request.json
@@ -166,7 +196,6 @@ def obter_questoes():
         sub_raw = f.get('subassunto', [])
         palavra = str(f.get('palavraChave', '')).lower()
         
-        # NOVOS FILTROS DE DESEMPENHO
         status_prog = str(f.get('statusProgresso', 'todas'))
         feitas = set(f.get('feitas_ids', []))
         erradas = set(f.get('erradas_ids', []))
@@ -176,11 +205,8 @@ def obter_questoes():
         subs = sub_raw if isinstance(sub_raw, list) else ([sub_raw] if sub_raw and sub_raw != 'Todos' else [])
         
         filtradas = []
-        
         for q in banco_questoes:
             q_id = str(q.get("id", "X"))
-            
-            # Validação do Desempenho
             if status_prog == 'ineditas' and q_id in feitas: continue
             if status_prog == 'feitas' and q_id not in feitas: continue
             if status_prog == 'erradas' and q_id not in erradas: continue
@@ -191,7 +217,6 @@ def obter_questoes():
             while len(t_clean) < 3: t_clean.append('Geral')
             m, a, s = str(t_clean[0]).strip(), str(t_clean[1]).strip(), str(t_clean[2]).strip()
             
-            # Validação Múltipla de Disciplinas
             if mats and m not in mats: continue
             if asss and a not in asss: continue
             if subs and s not in subs: continue
