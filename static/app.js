@@ -44,22 +44,39 @@ async function enviarCadastro() {
 }
 
 function alternarTemas() {
-    const check = document.getElementById('toggle-temas');
-    const dot = document.querySelector('.toggle-dot');
+    const check = document.getElementById('toggle-temas'); const dot = document.querySelector('.toggle-dot');
     if(check && check.checked) {
-        document.body.classList.add('hide-temas');
-        if(dot) dot.style.transform = 'translateX(100%)';
-        localStorage.setItem('hideTemas', 'true');
+        document.body.classList.add('hide-temas'); if(dot) dot.style.transform = 'translateX(100%)'; localStorage.setItem('hideTemas', 'true');
     } else {
-        document.body.classList.remove('hide-temas');
-        if(dot) dot.style.transform = 'translateX(0)';
-        localStorage.setItem('hideTemas', 'false');
+        document.body.classList.remove('hide-temas'); if(dot) dot.style.transform = 'translateX(0)'; localStorage.setItem('hideTemas', 'false');
     }
 }
 
 // ==========================================
 // PAINEL DE ADMINISTRAÇÃO AVANÇADO (DAVI)
 // ==========================================
+async function carregarConfigGlobal() {
+    try {
+        const res = await fetch('/api/config');
+        const config = await res.json();
+        const toggle = document.getElementById('toggle-ocultar-incompletas');
+        if (toggle) toggle.checked = config.ocultar_incompletas || false;
+    } catch(e) {}
+}
+
+async function salvarConfigGlobal() {
+    const toggle = document.getElementById('toggle-ocultar-incompletas');
+    if(!toggle) return;
+    const ocultar = toggle.checked;
+    try {
+        const res = await fetch('/api/admin/config', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: currentUser, ocultar_incompletas: ocultar})
+        });
+        if(!res.ok) { alert("Erro ao salvar configuração!"); toggle.checked = !ocultar; }
+    } catch(e) { alert("Erro de conexão."); toggle.checked = !ocultar; }
+}
+
 async function carregarPainelAdmin() {
     try {
         const resP = await fetch('/api/admin/pendentes'); const dataP = await resP.json(); const usersP = Object.keys(dataP);
@@ -75,7 +92,6 @@ async function carregarPainelAdmin() {
         }).join('');
     } catch(e) {}
 
-    // PUXAR RECLAMAÇÕES
     try {
         const resR = await fetch('/api/admin/reportes'); const reps = await resR.json();
         const contR = document.getElementById('lista-reportes');
@@ -88,7 +104,6 @@ async function carregarPainelAdmin() {
             </div>`).reverse().join('');
     } catch(e) {}
 
-    // PUXAR TABELA DETALHADA DE USUÁRIOS
     try {
         const resE = await fetch('/api/admin/estatisticas_usuarios'); const stats = await resE.json();
         const contE = document.getElementById('tabela-usuarios-body');
@@ -96,9 +111,7 @@ async function carregarPainelAdmin() {
             contE.innerHTML = stats.length === 0 ? '<tr><td colspan="4" class="p-4 text-center text-gray-400">Nenhum usuário cadastrado.</td></tr>' : stats.map(s => `
                 <tr class="hover:bg-blue-50 transition">
                     <td class="p-4 font-bold text-gray-900">${s.usuario}</td>
-                    <td class="p-4 text-center">
-                        <span class="px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold ${s.status === 'aprovado' ? 'bg-green-100 text-green-700' : (s.status === 'bloqueado' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700')}">${s.status}</span>
-                    </td>
+                    <td class="p-4 text-center"><span class="px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold ${s.status === 'aprovado' ? 'bg-green-100 text-green-700' : (s.status === 'bloqueado' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700')}">${s.status}</span></td>
                     <td class="p-4 text-center font-black text-blue-600">${s.questoes_respondidas}</td>
                     <td class="p-4 text-right text-xs text-gray-500 font-medium">${s.ultimo_acesso}</td>
                 </tr>`).join('');
@@ -243,7 +256,6 @@ function abrirCaderno(id) {
 function fecharCaderno() { document.getElementById('lista-cadernos').classList.remove('hidden'); document.getElementById('caderno-ativo-container').classList.add('hidden'); document.getElementById('questoes-container').innerHTML = ''; }
 function excluirCaderno(id) { if(!confirm("Apagar este caderno definitivo?")) return; cadernosUsuario = cadernosUsuario.filter(c => c.id !== id); syncDB('cadernos', cadernosUsuario); renderizarListaCadernos(); }
 
-
 // ==========================================
 // RENDERIZAÇÃO MESTRE & ESTATÍSTICAS
 // ==========================================
@@ -254,7 +266,7 @@ function renderizarQuestoesUI(questoes, isCaderno = false) {
     questoes.forEach((q, idx) => {
         const status = progressoUsuario[q.id]; let tag = '';
         if (status && status.timestamp && ((Date.now() - status.timestamp) / 3600000 >= 1)) {
-            const cor = status.acertou ? 'bg-green-500' : 'bg-red-500'; tag = `<div class="absolute -top-3 right-4 md:right-10 ${cor} text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg animate-fade-in">${status.acertou ? 'Você Acertou' : 'Você Errou'}</div>`;
+            const cor = status.acertou ? 'bg-green-500' : 'bg-red-500'; tag = `<div class="absolute -top-3 right-4 md:right-10 ${cor} text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg animate-fade-in z-10">${status.acertou ? 'Você Acertou' : 'Você Errou'}</div>`;
         }
 
         let textoEnunciado = q.enunciado.replace(/^Enunciado\s*:\s*/i, '');
@@ -280,7 +292,6 @@ function renderizarQuestoesUI(questoes, isCaderno = false) {
         const btnRes = `<div class="flex justify-between items-center mt-6 w-full border-t border-gray-100 pt-4"><button onclick="mostrarResolucao('${q.id}', false)" class="text-blue-600 text-base md:text-lg font-bold hover:underline p-2 -ml-2 transition">Ver Resolução</button>${btnReport}</div>`;
         const comHtml = `<div id="com-${q.id}" class="hidden mt-4 p-6 bg-blue-50 border border-blue-100 rounded-xl text-justify animate-fade-in w-full shadow-sm"><p class="font-black text-blue-900 mb-3 text-base md:text-lg">Gabarito: ${q.gabarito_letra}</p><p class="text-gray-800 leading-relaxed text-base break-words font-medium">${q.comentario}</p></div>`;
 
-        // ATENÇÃO: Retirei a classe "overflow-hidden" dessa div para a tag de acerto poder sobrepor a borda livremente!
         container.innerHTML += `<div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 mb-8 relative w-full">${tag}<div class="tema-dinamico-badge text-xs text-blue-500 bg-blue-50 inline-block px-3 py-1 rounded-full mb-4 font-bold tracking-widest uppercase break-words border border-blue-100">${q.temas_dinamicos.join(' • ')}</div><p class="text-base md:text-lg text-justify leading-relaxed font-bold text-gray-900 break-words">${prefixoNumeracao}${textoEnunciado}</p>${alts}${btnRes}${boxReport}${comHtml}</div>`;
     });
 }
@@ -382,7 +393,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     atualizarNumerosEstatisticas();
     if(document.getElementById('sidebar-avatar') && currentUser) document.getElementById('sidebar-avatar').innerText = currentUser.charAt(0).toUpperCase();
-    if (currentUser === 'davi' && document.getElementById('admin-panel')) { document.getElementById('admin-panel').classList.remove('hidden'); carregarPainelAdmin(); carregarLogsServidor(); setInterval(carregarLogsServidor, 3000); }
+    if (currentUser === 'davi' && document.getElementById('admin-panel')) { 
+        document.getElementById('admin-panel').classList.remove('hidden'); 
+        carregarConfigGlobal();
+        carregarPainelAdmin(); 
+        carregarLogsServidor(); 
+        setInterval(carregarLogsServidor, 3000); 
+    }
     if(document.getElementById('f-mat')) { carregarFiltros().then(() => aplicarFiltros(1)); }
     if(document.getElementById('lista-cadernos')) { renderizarListaCadernos(); }
 });
