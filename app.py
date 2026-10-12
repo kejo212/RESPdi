@@ -6,7 +6,7 @@ app = Flask(__name__)
 FIREBASE_URL = "https://respdi-1b63d-default-rtdb.firebaseio.com"
 
 # ==========================================
-# 1. FUNÇÕES DO FIREBASE & LOGS
+# 1. FUNÇÕES DO FIREBASE (AGORA COM ANTI-CACHE)
 # ==========================================
 sys_logs = []
 def registrar_log(mensagem):
@@ -18,7 +18,9 @@ def registrar_log(mensagem):
 
 def fb_get(path):
     try: 
-        res = requests.get(f"{FIREBASE_URL}/{path}.json")
+        # ?t=... força o Firebase a não usar cache, trazendo a resposta em tempo real sempre
+        timestamp = int(datetime.now().timestamp())
+        res = requests.get(f"{FIREBASE_URL}/{path}.json?t={timestamp}")
         dados = res.json()
         if isinstance(dados, dict) and 'error' in dados: return {}
         return dados or {}
@@ -184,7 +186,7 @@ def reportar():
     return jsonify({"sucesso": True})
 
 # ==========================================
-# 6. MOTOR DE QUESTÕES E FILTROS APRIMORADOS
+# 6. MOTOR DE QUESTÕES E FILTROS BLINDADOS
 # ==========================================
 @app.route('/api/categorias', methods=['GET'])
 def obter_categorias():
@@ -209,7 +211,7 @@ def obter_questoes():
         asss = ass_raw if isinstance(ass_raw, list) else ([ass_raw] if ass_raw and ass_raw != 'Todos' else [])
         subs = sub_raw if isinstance(sub_raw, list) else ([sub_raw] if sub_raw and sub_raw != 'Todos' else [])
         
-        # 🔥 CORREÇÃO: Busca o bloqueio do Admin em TEMPO REAL no Firebase
+        # Puxa o status REAL-TIME do Firebase (sem cache)
         config_nuvem = fb_get('config')
         ocultar_incompletas = False
         if isinstance(config_nuvem, dict):
@@ -218,16 +220,19 @@ def obter_questoes():
         filtradas = []
         
         for q in banco_questoes:
-            # --- REGRA DO ADMIN: PENTE FINO DE QUALIDADE ---
+            # --- PENTE FINO EXTREMO DE QUALIDADE (SE LIGADO PELO ADMIN) ---
             if ocultar_incompletas:
                 gab = str(q.get("gabarito_letra", "")).strip().upper()
                 com = str(q.get("comentario", "")).strip().lower()
                 
-                # Mais rigoroso: Barra se não tem letra, é NULA, ou comentário tem menos de 10 letras
-                sem_gab = not gab or gab in ['X', 'NULA', '?', 'NULL']
-                sem_com = not com or len(com) < 10 or 'sem coment' in com or com in ['null', 'none']
-                
-                if sem_gab or sem_com: continue # Extermina a questão da lista!
+                # Regra 1: O gabarito tem que ser EXATAMENTE uma dessas letras. Se for X, vazio, anulada, ele corta.
+                if gab not in ['A', 'B', 'C', 'D', 'E']:
+                    continue
+                    
+                # Regra 2: Resoluções falsas (textos automáticos curtos) ou menor que 15 letras são cortadas.
+                palavras_proibidas = ['sem coment', 'não comentada', 'sem resolu', 'não possui coment', 'anulada']
+                if len(com) < 15 or any(p in com for p in palavras_proibidas):
+                    continue
             
             q_id = str(q.get("id", "X"))
             if status_prog == 'ineditas' and q_id in feitas: continue
