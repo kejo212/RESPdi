@@ -110,7 +110,6 @@ async function resolverPendente(user, acao) { await fetch('/api/admin/resolver',
 async function excluirUsuario(user) { if(confirm(`Apagar '${user}'?`)) { await fetch('/api/admin/excluir', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: user}) }); carregarPainelAdmin(); } }
 async function carregarLogsServidor() { try { const res = await fetch('/api/admin/logs'); const logs = await res.json(); const container = document.getElementById('server-logs'); if(!container) return; let htmlLogs = logs.map(linha => { if (linha.includes("EXCLUÍDO") || linha.includes("[ERRO CRÍTICO]")) return `<div class="text-red-400 font-bold">${linha}</div>`; if (linha.includes("[OK]")) return `<div class="text-green-300">${linha}</div>`; return `<div>${linha}</div>`; }).join(''); const isAtBottom = container.scrollHeight - container.scrollTop === container.clientHeight; container.innerHTML = htmlLogs || '<div class="text-gray-500">Aguardando...</div>'; if (isAtBottom) container.scrollTop = container.scrollHeight; } catch(e) {} }
 
-
 // ==========================================
 // FILTROS AVANÇADOS
 // ==========================================
@@ -281,7 +280,8 @@ function renderizarQuestoesUI(questoes, isCaderno = false) {
         const btnRes = `<div class="flex justify-between items-center mt-6 w-full border-t border-gray-100 pt-4"><button onclick="mostrarResolucao('${q.id}', false)" class="text-blue-600 text-base md:text-lg font-bold hover:underline p-2 -ml-2 transition">Ver Resolução</button>${btnReport}</div>`;
         const comHtml = `<div id="com-${q.id}" class="hidden mt-4 p-6 bg-blue-50 border border-blue-100 rounded-xl text-justify animate-fade-in w-full shadow-sm"><p class="font-black text-blue-900 mb-3 text-base md:text-lg">Gabarito: ${q.gabarito_letra}</p><p class="text-gray-800 leading-relaxed text-base break-words font-medium">${q.comentario}</p></div>`;
 
-        container.innerHTML += `<div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 mb-8 relative w-full overflow-hidden">${tag}<div class="tema-dinamico-badge text-xs text-blue-500 bg-blue-50 inline-block px-3 py-1 rounded-full mb-4 font-bold tracking-widest uppercase break-words border border-blue-100">${q.temas_dinamicos.join(' • ')}</div><p class="text-base md:text-lg text-justify leading-relaxed font-bold text-gray-900 break-words">${prefixoNumeracao}${textoEnunciado}</p>${alts}${btnRes}${boxReport}${comHtml}</div>`;
+        // ATENÇÃO: Retirei a classe "overflow-hidden" dessa div para a tag de acerto poder sobrepor a borda livremente!
+        container.innerHTML += `<div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 mb-8 relative w-full">${tag}<div class="tema-dinamico-badge text-xs text-blue-500 bg-blue-50 inline-block px-3 py-1 rounded-full mb-4 font-bold tracking-widest uppercase break-words border border-blue-100">${q.temas_dinamicos.join(' • ')}</div><p class="text-base md:text-lg text-justify leading-relaxed font-bold text-gray-900 break-words">${prefixoNumeracao}${textoEnunciado}</p>${alts}${btnRes}${boxReport}${comHtml}</div>`;
     });
 }
 
@@ -320,18 +320,15 @@ function atualizarNumerosEstatisticas() {
     if(document.getElementById('stat-acertos')) document.getElementById('stat-acertos').innerText = acertos;
     if(document.getElementById('stat-erros')) document.getElementById('stat-erros').innerText = erros;
 
-    // MATEMÁTICA DO VELOCÍMETRO DE TAXA DE ACERTO
     let taxa = ids.length > 0 ? Math.round((acertos / ids.length) * 100) : 0;
     let gauge = document.getElementById('gauge-arc');
     let txtTaxa = document.getElementById('stat-taxa');
     
     if (gauge && txtTaxa) {
         txtTaxa.innerText = `${taxa}%`;
-        // Dashoffset vai de 125.6 (Vazio/0%) até 0 (Cheio/100%)
         let offset = 125.6 - (125.6 * (taxa / 100));
         gauge.style.strokeDashoffset = offset;
         
-        // Cores Dinâmicas: Vermelho (<50%), Amarelo (<75%), Verde (>75%)
         if (taxa < 50) { gauge.setAttribute('stroke', '#EF4444'); txtTaxa.classList.replace('text-gray-800', 'text-red-600'); }
         else if (taxa < 75) { gauge.setAttribute('stroke', '#F59E0B'); txtTaxa.classList.replace('text-gray-800', 'text-yellow-600'); }
         else { gauge.setAttribute('stroke', '#10B981'); txtTaxa.classList.replace('text-gray-800', 'text-green-600'); }
