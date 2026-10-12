@@ -48,12 +48,8 @@ for caminho_arquivo in arquivos_json:
     except: pass
 
 # ==========================================
-# 3. CONFIGURAÇÕES GLOBAIS E USUÁRIOS
+# 3. GESTÃO DE USUÁRIOS
 # ==========================================
-SISTEMA_CONFIG = fb_get('config')
-if not isinstance(SISTEMA_CONFIG, dict):
-    SISTEMA_CONFIG = {"ocultar_incompletas": False}
-
 def carregar_usuarios():
     db = fb_get('usuarios')
     if not db: 
@@ -142,16 +138,18 @@ def obter_logs(): return jsonify(sys_logs)
 # ROTAS DA CONFIGURAÇÃO GLOBAL DO DAVI
 @app.route('/api/admin/config', methods=['POST'])
 def update_config():
-    global SISTEMA_CONFIG
     dados = request.json
     if dados.get('username') != 'davi': return jsonify({"erro": "Não autorizado"}), 403
-    SISTEMA_CONFIG['ocultar_incompletas'] = dados.get('ocultar_incompletas', False)
-    fb_put('config', SISTEMA_CONFIG)
-    registrar_log(f"ADMIN: Ocultar Incompletas = {SISTEMA_CONFIG['ocultar_incompletas']}")
+    novo_status = dados.get('ocultar_incompletas', False)
+    fb_put('config', {"ocultar_incompletas": novo_status})
+    registrar_log(f"ADMIN: Ocultar Incompletas alterado para = {novo_status}")
     return jsonify({"sucesso": True})
 
 @app.route('/api/config', methods=['GET'])
-def get_config(): return jsonify(SISTEMA_CONFIG)
+def get_config(): 
+    cfg = fb_get('config')
+    if not isinstance(cfg, dict): cfg = {"ocultar_incompletas": False}
+    return jsonify(cfg)
 
 @app.route('/api/admin/estatisticas_usuarios', methods=['GET'])
 def estatisticas_usuarios():
@@ -211,7 +209,12 @@ def obter_questoes():
         asss = ass_raw if isinstance(ass_raw, list) else ([ass_raw] if ass_raw and ass_raw != 'Todos' else [])
         subs = sub_raw if isinstance(sub_raw, list) else ([sub_raw] if sub_raw and sub_raw != 'Todos' else [])
         
-        ocultar_incompletas = SISTEMA_CONFIG.get("ocultar_incompletas", False)
+        # 🔥 CORREÇÃO: Busca o bloqueio do Admin em TEMPO REAL no Firebase
+        config_nuvem = fb_get('config')
+        ocultar_incompletas = False
+        if isinstance(config_nuvem, dict):
+            ocultar_incompletas = config_nuvem.get("ocultar_incompletas", False)
+
         filtradas = []
         
         for q in banco_questoes:
@@ -219,9 +222,12 @@ def obter_questoes():
             if ocultar_incompletas:
                 gab = str(q.get("gabarito_letra", "")).strip().upper()
                 com = str(q.get("comentario", "")).strip().lower()
-                sem_gab = not gab or gab == 'X' or gab == 'NULA'
-                sem_com = not com or 'sem coment' in com or com == 'null' or com == 'none'
-                if sem_gab or sem_com: continue # Pula essa questão
+                
+                # Mais rigoroso: Barra se não tem letra, é NULA, ou comentário tem menos de 10 letras
+                sem_gab = not gab or gab in ['X', 'NULA', '?', 'NULL']
+                sem_com = not com or len(com) < 10 or 'sem coment' in com or com in ['null', 'none']
+                
+                if sem_gab or sem_com: continue # Extermina a questão da lista!
             
             q_id = str(q.get("id", "X"))
             if status_prog == 'ineditas' and q_id in feitas: continue
