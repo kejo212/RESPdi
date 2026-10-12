@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>RESPdi - Início</title>
-    <link rel="icon" type="image/png" href="/static/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
@@ -23,7 +22,7 @@
         <h1 class="text-3xl md:text-4xl font-black text-gray-900 mb-2">Visão Geral</h1>
         <p class="text-gray-500 mb-8 text-sm md:text-base">Acompanhe seu desempenho e acesse seus materiais.</p>
         
-        <!-- Estatísticas Globais (Agora com 4 colunas) -->
+        <!-- Estatísticas Globais -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8 w-full">
             <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
                 <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Total Resolvido</p>
@@ -35,17 +34,13 @@
             </div>
             <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-red-100 flex flex-col items-center">
                 <p class="text-[10px] md:text-xs font-bold text-red-500 uppercase tracking-wider">Erros</p>
-                <p class="text-3xl md:text-4xl font-black mt-2 text-red-600" id="stat-erros">0</p> <!-- ID CORRIGIDO! -->
+                <p class="text-3xl md:text-4xl font-black mt-2 text-red-600" id="stat-erros">0</p>
             </div>
-            
-            <!-- NOVO: Velocímetro de Taxa de Acerto -->
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center relative overflow-hidden">
                 <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Taxa de Acerto</p>
                 <div class="relative w-28 h-14 md:w-32 md:h-16">
                     <svg viewBox="0 0 100 50" class="w-full h-full overflow-visible">
-                        <!-- Arco de Fundo Cinza -->
                         <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#F3F4F6" stroke-width="12" stroke-linecap="round"></path>
-                        <!-- Arco Colorido Dinâmico -->
                         <path id="gauge-arc" d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#10B981" stroke-width="12" stroke-linecap="round" stroke-dasharray="125.6" stroke-dashoffset="125.6" class="transition-all duration-1000 ease-out"></path>
                     </svg>
                     <div class="absolute bottom-0 left-0 w-full text-center">
@@ -62,7 +57,6 @@
             </h2>
             <p class="text-xs md:text-sm text-gray-500 mb-4">Arquivos de apoio, resumos e bibliografia complementar.</p>
             <div class="w-full bg-gray-100 rounded-xl overflow-hidden border border-gray-200" style="height: 350px;">
-                <!-- SEU ID DO DRIVE -->
                 <iframe src="https://drive.google.com/embeddedfolderview?id=13tBBSrXMsu2NGW0jCSvrzIE9epV-Bw47#grid" width="100%" height="100%" frameborder="0" scrolling="no"></iframe>
             </div>
         </div>
@@ -80,26 +74,39 @@
                 Centro de Comando (Admin)
             </h1>
             
+            <!-- NOVO: Configurações Globais do Sistema -->
+            <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-yellow-300 w-full">
+                <h2 class="text-lg md:text-xl font-bold text-yellow-800 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg>
+                    Configurações Globais
+                </h2>
+                <div class="flex items-center justify-between bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                    <div>
+                        <p class="font-bold text-gray-900">Ocultar Questões Incompletas</p>
+                        <p class="text-xs md:text-sm text-gray-600">Remove de todo o sistema as questões sem gabarito ou sem resolução em texto.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer ml-4">
+                        <input type="checkbox" id="toggle-ocultar-incompletas" class="sr-only peer" onchange="salvarConfigGlobal()">
+                        <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-yellow-500"></div>
+                    </label>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
                 <!-- Aprovações e Ativos -->
                 <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-200">
                     <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-4 flex justify-between items-center">
-                        Aprovações
-                        <span class="bg-blue-100 text-blue-700 text-[10px] md:text-xs px-2 py-1 rounded-full font-bold" id="contador-pendentes">0 na fila</span>
+                        Aprovações <span class="bg-blue-100 text-blue-700 text-[10px] md:text-xs px-2 py-1 rounded-full font-bold" id="contador-pendentes">0 na fila</span>
                     </h2>
                     <div id="lista-pendentes" class="space-y-3 max-h-40 overflow-y-auto pr-1 mb-6"></div>
-                    
-                    <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-4 flex justify-between items-center border-t pt-4">
-                        Status Rápido
-                    </h2>
+                    <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-4 border-t pt-4">Status Rápido</h2>
                     <div id="lista-ativos" class="space-y-3 max-h-48 overflow-y-auto pr-1"></div>
                 </div>
 
-                <!-- Reclamações de Questões -->
+                <!-- Reclamações -->
                 <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-red-100">
                     <h2 class="text-lg md:text-xl font-bold text-red-800 mb-4 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        Reporte de Erros
+                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> Reporte de Erros
                     </h2>
                     <div id="lista-reportes" class="space-y-3 max-h-96 overflow-y-auto pr-1"></div>
                 </div>
@@ -107,19 +114,17 @@
                 <!-- Console de Logs -->
                 <div class="bg-gray-900 p-5 md:p-6 rounded-2xl shadow-sm border border-gray-800 flex flex-col h-80 lg:h-auto">
                     <h2 class="text-lg md:text-xl font-bold text-white mb-3 flex items-center gap-2">
-                        <svg class="w-4 h-4 md:w-5 md:h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        Terminal / Logs
+                        <svg class="w-4 h-4 md:w-5 md:h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> Terminal / Logs
                     </h2>
                     <div id="server-logs" class="bg-black text-green-400 font-mono text-[10px] md:text-xs p-3 md:p-4 rounded-xl flex-1 overflow-y-auto terminal-scroll leading-relaxed"></div>
                 </div>
             </div>
 
-            <!-- Tabela Detalhada de Usuários (Rodapé do Admin) -->
+            <!-- Tabela Detalhada de Usuários -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 mt-6 w-full overflow-hidden">
                 <div class="p-5 md:p-6 bg-gray-50 border-b border-gray-200">
                     <h2 class="text-lg md:text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                        Tabela de Desempenho dos Alunos
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg> Tabela de Desempenho dos Alunos
                     </h2>
                 </div>
                 <div class="overflow-x-auto">
@@ -127,14 +132,12 @@
                         <thead>
                             <tr class="bg-white text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
                                 <th class="p-4 font-bold">Usuário</th>
-                                <th class="p-4 font-bold text-center">Status da Conta</th>
+                                <th class="p-4 font-bold text-center">Status</th>
                                 <th class="p-4 font-bold text-center">Questões Resolvidas</th>
                                 <th class="p-4 font-bold text-right">Último Acesso</th>
                             </tr>
                         </thead>
-                        <tbody id="tabela-usuarios-body" class="divide-y divide-gray-100">
-                            <!-- Injetado via JS -->
-                        </tbody>
+                        <tbody id="tabela-usuarios-body" class="divide-y divide-gray-100"></tbody>
                     </table>
                 </div>
             </div>
@@ -142,6 +145,7 @@
         </div>
     </div>
 
-    <script src="/static/app.js?v=6005"></script>
+    <!-- Modifiquei a versão para que o navegador recarregue tudo novo -->
+    <script src="/static/app.js?v=7000"></script>
 </body>
 </html>
