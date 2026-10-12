@@ -43,7 +43,6 @@ async function enviarCadastro() {
     } catch (e) {}
 }
 
-// TOGGLE MODO ANTI-SPOILER
 function alternarTemas() {
     const check = document.getElementById('toggle-temas');
     const dot = document.querySelector('.toggle-dot');
@@ -58,19 +57,52 @@ function alternarTemas() {
     }
 }
 
+// ==========================================
+// PAINEL DE ADMINISTRAÇÃO AVANÇADO (DAVI)
+// ==========================================
 async function carregarPainelAdmin() {
     try {
         const resP = await fetch('/api/admin/pendentes'); const dataP = await resP.json(); const usersP = Object.keys(dataP);
         if(document.getElementById('contador-pendentes')) document.getElementById('contador-pendentes').innerText = `${usersP.length} na fila`;
         const contP = document.getElementById('lista-pendentes');
-        if(contP) contP.innerHTML = usersP.length === 0 ? '<div class="text-gray-400 text-sm">Vazio.</div>' : usersP.map(u => `<div class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center"><span class="font-bold text-gray-800">${u}</span><div class="flex gap-1"><button onclick="resolverPendente('${u}', 'aprovado')" class="bg-green-500 text-white px-2 py-1 rounded shadow-sm">✓</button><button onclick="resolverPendente('${u}', 'negado')" class="bg-red-500 text-white px-2 py-1 rounded shadow-sm">✗</button></div></div>`).join('');
+        if(contP) contP.innerHTML = usersP.length === 0 ? '<div class="text-gray-400 text-sm">Vazio.</div>' : usersP.map(u => `<div class="p-3 bg-gray-50 border border-gray-100 rounded-xl flex justify-between items-center"><span class="font-bold text-gray-800">${u}</span><div class="flex gap-1"><button onclick="resolverPendente('${u}', 'aprovado')" class="bg-green-500 text-white px-2 py-1 rounded shadow-sm">✓</button><button onclick="resolverPendente('${u}', 'negado')" class="bg-red-500 text-white px-2 py-1 rounded shadow-sm">✗</button></div></div>`).join('');
         
         const resA = await fetch('/api/admin/usuarios_ativos'); const dataA = await resA.json(); const usersA = Object.keys(dataA);
         const contA = document.getElementById('lista-ativos');
         if(contA) contA.innerHTML = usersA.length === 0 ? '<div class="text-gray-400 text-sm">Nenhum outro usuário.</div>' : usersA.map(u => {
             const block = dataA[u].status === 'bloqueado';
-            return `<div class="p-3 ${block ? 'bg-red-50' : 'bg-gray-50'} border rounded-lg flex flex-col gap-2"><div class="flex justify-between items-center"><div><span class="font-bold ${block ? 'text-red-900' : 'text-gray-800'}">${u}</span><span class="text-[10px] ml-2 ${block ? 'text-red-500' : 'text-green-500'}">${block ? 'Bloqueado' : 'Ativo'}</span></div><div class="flex gap-1"><button onclick="resolverPendente('${u}', '${block ? 'aprovado' : 'bloqueado'}')" class="${block ? 'bg-green-500' : 'bg-orange-500'} text-white px-2 py-1 rounded text-xs font-bold shadow-sm">${block ? 'Desbloq.' : 'Bloquear'}</button><button onclick="excluirUsuario('${u}')" class="bg-gray-800 text-white px-2 py-1 rounded text-xs font-bold shadow-sm">Excluir</button></div></div></div>`;
+            return `<div class="p-3 ${block ? 'bg-red-50' : 'bg-gray-50'} border border-gray-100 rounded-xl flex flex-col gap-2"><div class="flex justify-between items-center"><div><span class="font-bold ${block ? 'text-red-900' : 'text-gray-800'}">${u}</span><span class="text-[10px] ml-2 ${block ? 'text-red-500' : 'text-green-500'}">${block ? 'Bloqueado' : 'Ativo'}</span></div><div class="flex gap-1"><button onclick="resolverPendente('${u}', '${block ? 'aprovado' : 'bloqueado'}')" class="${block ? 'bg-green-500' : 'bg-orange-500'} text-white px-2 py-1 rounded text-xs font-bold shadow-sm">${block ? 'Desbloq.' : 'Bloquear'}</button><button onclick="excluirUsuario('${u}')" class="bg-gray-800 text-white px-2 py-1 rounded text-xs font-bold shadow-sm">Excluir</button></div></div></div>`;
         }).join('');
+    } catch(e) {}
+
+    // PUXAR RECLAMAÇÕES
+    try {
+        const resR = await fetch('/api/admin/reportes'); const reps = await resR.json();
+        const contR = document.getElementById('lista-reportes');
+        if(contR) contR.innerHTML = reps.length === 0 ? '<div class="text-gray-400 text-sm">Nenhuma reclamação registrada.</div>' : reps.map(r => `
+            <div class="p-4 bg-red-50 border border-red-100 rounded-xl text-sm mb-3 shadow-sm">
+                <div class="flex justify-between font-black text-red-900 mb-2 border-b border-red-200 pb-2">
+                    <span>ID Questão: ${r.id_questao}</span><span class="text-xs font-medium text-red-500">${r.data}</span>
+                </div>
+                <p class="text-gray-800"><span class="font-bold text-gray-900">Usuário: ${r.usuario}</span><br>Motivo: ${r.erro}</p>
+            </div>`).reverse().join('');
+    } catch(e) {}
+
+    // PUXAR TABELA DETALHADA DE USUÁRIOS
+    try {
+        const resE = await fetch('/api/admin/estatisticas_usuarios'); const stats = await resE.json();
+        const contE = document.getElementById('tabela-usuarios-body');
+        if(contE) {
+            contE.innerHTML = stats.length === 0 ? '<tr><td colspan="4" class="p-4 text-center text-gray-400">Nenhum usuário cadastrado.</td></tr>' : stats.map(s => `
+                <tr class="hover:bg-blue-50 transition">
+                    <td class="p-4 font-bold text-gray-900">${s.usuario}</td>
+                    <td class="p-4 text-center">
+                        <span class="px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold ${s.status === 'aprovado' ? 'bg-green-100 text-green-700' : (s.status === 'bloqueado' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700')}">${s.status}</span>
+                    </td>
+                    <td class="p-4 text-center font-black text-blue-600">${s.questoes_respondidas}</td>
+                    <td class="p-4 text-right text-xs text-gray-500 font-medium">${s.ultimo_acesso}</td>
+                </tr>`).join('');
+        }
     } catch(e) {}
 }
 
@@ -78,7 +110,10 @@ async function resolverPendente(user, acao) { await fetch('/api/admin/resolver',
 async function excluirUsuario(user) { if(confirm(`Apagar '${user}'?`)) { await fetch('/api/admin/excluir', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: user}) }); carregarPainelAdmin(); } }
 async function carregarLogsServidor() { try { const res = await fetch('/api/admin/logs'); const logs = await res.json(); const container = document.getElementById('server-logs'); if(!container) return; let htmlLogs = logs.map(linha => { if (linha.includes("EXCLUÍDO") || linha.includes("[ERRO CRÍTICO]")) return `<div class="text-red-400 font-bold">${linha}</div>`; if (linha.includes("[OK]")) return `<div class="text-green-300">${linha}</div>`; return `<div>${linha}</div>`; }).join(''); const isAtBottom = container.scrollHeight - container.scrollTop === container.clientHeight; container.innerHTML = htmlLogs || '<div class="text-gray-500">Aguardando...</div>'; if (isAtBottom) container.scrollTop = container.scrollHeight; } catch(e) {} }
 
+
+// ==========================================
 // FILTROS AVANÇADOS
+// ==========================================
 let categoriasDB = {};
 const getSelectedValues = (id) => { const el = document.getElementById(id); return el ? Array.from(el.selectedOptions).map(opt => opt.value).filter(v => v !== 'todas') : []; };
 
@@ -105,11 +140,9 @@ async function aplicarFiltros(pagina = 1) {
     paginaAtual = pagina;
     const limit = document.getElementById('limite-pagina') ? document.getElementById('limite-pagina').value : 20;
     const mats = getSelectedValues('f-mat'); const asss = getSelectedValues('f-ass'); const subs = getSelectedValues('f-sub');
-    const statusBox = document.getElementById('f-status');
-    const statusProg = statusBox && statusBox.value ? statusBox.value : 'todas';
+    const statusBox = document.getElementById('f-status'); const statusProg = statusBox && statusBox.value ? statusBox.value : 'todas';
     const palavra = document.getElementById('f-busca') ? document.getElementById('f-busca').value.trim() : "";
     
-    // Calcula o desempenho local para enviar pro backend filtrar
     const feitas = Object.keys(progressoUsuario);
     const erradas = feitas.filter(id => progressoUsuario[id].acertou === false);
 
@@ -122,8 +155,7 @@ async function aplicarFiltros(pagina = 1) {
     try {
         const res = await fetch('/api/questoes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
         const dados = await res.json();
-        renderizarQuestoesUI(dados.questoes, false); 
-        renderizarPaginacaoUI(dados.total, parseInt(limit));
+        renderizarQuestoesUI(dados.questoes, false); renderizarPaginacaoUI(dados.total, parseInt(limit));
         if(document.getElementById('f-mat')) window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch(e) {}
 }
@@ -136,7 +168,6 @@ function registrarHistoricoFiltro(f) {
     
     const rotulo = (f.palavraChave ? `"${f.palavraChave}"` : '') + stat + (f.materia.length ? ` [${f.materia.length} Matérias]` : '');
     if(!rotulo.trim()) return;
-    
     if(historicoUsuario.length > 0 && historicoUsuario[0].rotulo === rotulo) return;
     historicoUsuario.unshift({ rotulo: rotulo, config: f });
     if(historicoUsuario.length > 8) historicoUsuario.pop();
@@ -152,7 +183,6 @@ function renderizarHistoricoFiltros() {
 function aplicarHistorico(index) {
     if(!historicoUsuario[index]) return; const conf = historicoUsuario[index].config;
     if(document.getElementById('f-busca')) document.getElementById('f-busca').value = conf.palavraChave || "";
-    // Atualiza dropdowns visualmente onde possível
     if(document.getElementById('f-status')) document.getElementById('f-status').value = conf.statusProgresso || "todas";
     fetch('/api/questoes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(conf) }).then(res => res.json()).then(dados => {
         if(document.getElementById('aviso-aleatorio')) document.getElementById('aviso-aleatorio').classList.add('hidden');
@@ -160,7 +190,9 @@ function aplicarHistorico(index) {
     });
 }
 
+// ==========================================
 // CADERNOS
+// ==========================================
 function abrirModalCaderno() { document.getElementById('modal-caderno').classList.replace('hidden', 'flex'); document.body.classList.add('overflow-hidden'); }
 function fecharModalCaderno() { document.getElementById('modal-caderno').classList.replace('flex', 'hidden'); document.body.classList.remove('overflow-hidden'); document.getElementById('nome-caderno').value = ""; document.getElementById('qtd-caderno').value = ""; }
 
@@ -212,8 +244,9 @@ function abrirCaderno(id) {
 function fecharCaderno() { document.getElementById('lista-cadernos').classList.remove('hidden'); document.getElementById('caderno-ativo-container').classList.add('hidden'); document.getElementById('questoes-container').innerHTML = ''; }
 function excluirCaderno(id) { if(!confirm("Apagar este caderno definitivo?")) return; cadernosUsuario = cadernosUsuario.filter(c => c.id !== id); syncDB('cadernos', cadernosUsuario); renderizarListaCadernos(); }
 
+
 // ==========================================
-// 6. MESTRE DE RENDERIZAÇÃO (AGORA ACEITA ISCADERNO)
+// RENDERIZAÇÃO MESTRE & ESTATÍSTICAS
 // ==========================================
 function renderizarQuestoesUI(questoes, isCaderno = false) {
     const container = document.getElementById('questoes-container'); if(!container) return; container.innerHTML = '';
@@ -226,7 +259,6 @@ function renderizarQuestoesUI(questoes, isCaderno = false) {
         }
 
         let textoEnunciado = q.enunciado.replace(/^Enunciado\s*:\s*/i, '');
-        // SE FOR CADERNO, ADICIONA A NUMERAÇÃO FIXA
         let prefixoNumeracao = isCaderno ? `<span class="font-black text-blue-600 block mb-2 md:inline md:mr-2">Questão ${idx + 1}:</span>` : '';
 
         let alts = `<div class="mt-6 space-y-3 w-full" id="alts-${q.id}">`;
@@ -249,7 +281,6 @@ function renderizarQuestoesUI(questoes, isCaderno = false) {
         const btnRes = `<div class="flex justify-between items-center mt-6 w-full border-t border-gray-100 pt-4"><button onclick="mostrarResolucao('${q.id}', false)" class="text-blue-600 text-base md:text-lg font-bold hover:underline p-2 -ml-2 transition">Ver Resolução</button>${btnReport}</div>`;
         const comHtml = `<div id="com-${q.id}" class="hidden mt-4 p-6 bg-blue-50 border border-blue-100 rounded-xl text-justify animate-fade-in w-full shadow-sm"><p class="font-black text-blue-900 mb-3 text-base md:text-lg">Gabarito: ${q.gabarito_letra}</p><p class="text-gray-800 leading-relaxed text-base break-words font-medium">${q.comentario}</p></div>`;
 
-        // ADICIONADA A CLASSE tema-dinamico-badge PARA O BLUR FUNCIONAR
         container.innerHTML += `<div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 mb-8 relative w-full overflow-hidden">${tag}<div class="tema-dinamico-badge text-xs text-blue-500 bg-blue-50 inline-block px-3 py-1 rounded-full mb-4 font-bold tracking-widest uppercase break-words border border-blue-100">${q.temas_dinamicos.join(' • ')}</div><p class="text-base md:text-lg text-justify leading-relaxed font-bold text-gray-900 break-words">${prefixoNumeracao}${textoEnunciado}</p>${alts}${btnRes}${boxReport}${comHtml}</div>`;
     });
 }
@@ -280,10 +311,31 @@ function mostrarResolucao(id, autoAberta = false) {
 async function enviarReporte(id) { const tb = document.getElementById(`texto-report-${id}`); const motivo = tb.value.trim(); if (!motivo) return alert("Descreva o erro."); try { await fetch('/api/reportar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: id, motivo: motivo, usuario: currentUser }) }); document.getElementById(`report-box-${id}`).classList.add('hidden'); tb.value = ''; alert("Erro reportado na nuvem com sucesso!"); } catch(e) {} }
 
 function atualizarNumerosEstatisticas() {
-    const ids = Object.keys(progressoUsuario); let acertos = 0; ids.forEach(id => { if (progressoUsuario[id].acertou) acertos++; });
+    const ids = Object.keys(progressoUsuario); 
+    let acertos = 0; 
+    ids.forEach(id => { if (progressoUsuario[id].acertou) acertos++; });
+    let erros = ids.length - acertos;
+    
     if(document.getElementById('stat-total')) document.getElementById('stat-total').innerText = ids.length;
     if(document.getElementById('stat-acertos')) document.getElementById('stat-acertos').innerText = acertos;
-    if(document.getElementById('stat-erros')) document.getElementById('stat-erros').innerText = ids.length - acertos;
+    if(document.getElementById('stat-erros')) document.getElementById('stat-erros').innerText = erros;
+
+    // MATEMÁTICA DO VELOCÍMETRO DE TAXA DE ACERTO
+    let taxa = ids.length > 0 ? Math.round((acertos / ids.length) * 100) : 0;
+    let gauge = document.getElementById('gauge-arc');
+    let txtTaxa = document.getElementById('stat-taxa');
+    
+    if (gauge && txtTaxa) {
+        txtTaxa.innerText = `${taxa}%`;
+        // Dashoffset vai de 125.6 (Vazio/0%) até 0 (Cheio/100%)
+        let offset = 125.6 - (125.6 * (taxa / 100));
+        gauge.style.strokeDashoffset = offset;
+        
+        // Cores Dinâmicas: Vermelho (<50%), Amarelo (<75%), Verde (>75%)
+        if (taxa < 50) { gauge.setAttribute('stroke', '#EF4444'); txtTaxa.classList.replace('text-gray-800', 'text-red-600'); }
+        else if (taxa < 75) { gauge.setAttribute('stroke', '#F59E0B'); txtTaxa.classList.replace('text-gray-800', 'text-yellow-600'); }
+        else { gauge.setAttribute('stroke', '#10B981'); txtTaxa.classList.replace('text-gray-800', 'text-green-600'); }
+    }
 }
 
 function renderizarPaginacaoUI(total, limit) {
@@ -301,6 +353,27 @@ function renderizarPaginacaoUI(total, limit) {
     }
     if (mostrouUltima || paginaAtual < totalPags - 1) container.innerHTML += `<button onclick="aplicarFiltros(${totalPags})" class="w-10 h-10 border border-gray-200 rounded-xl hover:bg-gray-50 transition shadow-sm font-bold">${totalPags}</button>`;
     if (paginaAtual < totalPags) container.innerHTML += `<button onclick="aplicarFiltros(${paginaAtual + 1})" class="px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition shadow-sm font-bold">Próxima »</button>`;
+}
+
+async function gerarPDF() {
+    alert("Iniciando geração do PDF...");
+    const { jsPDF } = window.jspdf; const doc = new jsPDF();
+    const payload = { pagina: 1, limite: 100, materia: getSelectedValues('f-mat') };
+    const res = await fetch('/api/questoes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+    const dados = await res.json();
+    let y = 20; let gabaritoArr = [];
+    doc.setFontSize(16); doc.text("RESPdi - Simulado", 10, y); y += 10; doc.setFontSize(10);
+    dados.questoes.forEach((q, idx) => {
+        gabaritoArr.push([idx + 1, q.gabarito_letra]);
+        let textoQuestao = `Questao ${idx + 1}: ${q.enunciado.replace(/^Enunciado\s*:\s*/i, '')}\n`;
+        q.alternativas.forEach(alt => textoQuestao += `${alt}\n`);
+        const lines = doc.splitTextToSize(textoQuestao, 180);
+        if (y + (lines.length * 5) > 280) { doc.addPage(); y = 20; }
+        doc.text(lines, 10, y); y += (lines.length * 5) + 10;
+    });
+    doc.addPage(); doc.text("Gabarito do Simulado", 10, 20);
+    doc.autoTable({ startY: 30, head: [['Questao', 'Alternativa Correta']], body: gabaritoArr });
+    doc.save("Simulado_RESPdi.pdf");
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
