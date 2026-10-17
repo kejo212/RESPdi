@@ -799,3 +799,11 @@ body.page-dashboard, body.page-questions, body.page-notebooks, body.page-profile
  .question-recent-filter-details summary { flex-wrap:wrap; gap:8px; padding:8px 14px; }
  .question-recent-filter-details summary small { flex-basis:100%; margin-left:28px; }
 }
+
+@media (max-width: 767px) {
+  .page-questions > .question-page-shell {
+    margin: 0 !important;
+    max-width: 100% !important;
+    padding: 82px 12px 114px !important;
+  }
+}
