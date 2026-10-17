@@ -52,17 +52,48 @@
                 <input type="text" id="f-busca" placeholder="Pesquisar palavra-chave no enunciado..." class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm md:text-base font-medium transition">
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 mb-5 question-filter-grid">
-                <label class="question-filter-field"><span class="question-filter-label">Status de resolução</span><select id="f-status" class="w-full h-24 p-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-medium" multiple title="Selecione o Histórico (Opcional)">
-                    <option value="todas" selected>Todos os Status</option>
-                    <option value="ineditas">💡 Apenas Inéditas</option>
-                    <option value="feitas">✅ Já Feitas</option>
-                    <option value="erradas">❌ Apenas Erradas</option>
-                </select></label>
-                <label class="question-filter-field"><span class="question-filter-label">Especialidade / matéria</span><select id="f-mat" multiple class="w-full h-24 p-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-medium"></select></label>
-                <label class="question-filter-field"><span class="question-filter-label">Assunto</span><select id="f-ass" multiple disabled class="w-full h-24 p-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-medium disabled:opacity-50"></select></label>
-                <label class="question-filter-field"><span class="question-filter-label">Subassunto</span><select id="f-sub" multiple disabled class="w-full h-24 p-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-medium disabled:opacity-50"></select></label>
+            
+            <div class="question-filter-tabs" role="tablist" aria-label="Categorias de filtros">
+              <button type="button" class="question-filter-tab is-active" data-filter-tab="tema" role="tab" aria-selected="true">Especialidade / Assunto</button>
+              <button type="button" class="question-filter-tab" data-filter-tab="instituicao" role="tab" aria-selected="false">Instituição</button>
+              <button type="button" class="question-filter-tab" data-filter-tab="ano" role="tab" aria-selected="false">Ano</button>
+              <button type="button" class="question-filter-tab" data-filter-tab="regiao" role="tab" aria-selected="false">Região</button>
+              <button type="button" class="question-filter-tab" data-filter-tab="finalidade" role="tab" aria-selected="false">Finalidade</button>
+              <button type="button" class="question-filter-tab" data-filter-tab="professor" role="tab" aria-selected="false">Professor</button>
+              <button type="button" class="question-filter-tab" data-filter-tab="avancados" role="tab" aria-selected="false">Filtros avançados</button>
             </div>
+            <div class="question-filter-workspace">
+              <div class="question-filter-left">
+                <div class="question-filter-group is-active" data-filter-group="tema" role="tabpanel">
+                  <div class="question-filter-grid">
+                    <label class="question-filter-field"><span class="question-filter-label">Status de resolução</span><select id="f-status" class="question-filter-select"><option value="todas" selected>Todos os status</option><option value="ineditas">Apenas inéditas</option><option value="feitas">Já respondidas</option><option value="erradas">Respondidas incorretamente</option></select></label>
+                    <label class="question-filter-field"><span class="question-filter-label">Especialidade / matéria</span><select id="f-mat" multiple class="question-filter-multi"></select></label>
+                    <label class="question-filter-field"><span class="question-filter-label">Assunto</span><select id="f-ass" multiple disabled class="question-filter-multi"></select></label>
+                    <label class="question-filter-field"><span class="question-filter-label">Subassunto</span><select id="f-sub" multiple disabled class="question-filter-multi"></select></label>
+                  </div>
+                  <p class="question-filter-help">Você pode combinar matérias; assuntos e subassuntos dependem das seleções anteriores.</p>
+                </div>
+                <div class="question-filter-group" data-filter-group="instituicao" role="tabpanel" hidden><label class="question-filter-field"><span class="question-filter-label">Instituição / banca</span><select id="f-inst" multiple class="question-filter-multi"></select></label><p class="question-filter-help" data-metadata-help="instituicao">Opções baseadas nos metadados disponíveis nas questões.</p></div>
+                <div class="question-filter-group" data-filter-group="ano" role="tabpanel" hidden><label class="question-filter-field"><span class="question-filter-label">Ano da prova</span><select id="f-ano" multiple class="question-filter-multi"></select></label><p class="question-filter-help" data-metadata-help="ano">Opções baseadas nos metadados disponíveis nas questões.</p></div>
+                <div class="question-filter-group" data-filter-group="regiao" role="tabpanel" hidden><label class="question-filter-field"><span class="question-filter-label">Região</span><select id="f-regiao" multiple class="question-filter-multi"></select></label><p class="question-filter-help" data-metadata-help="regiao">Opções baseadas nos metadados disponíveis nas questões.</p></div>
+                <div class="question-filter-group" data-filter-group="finalidade" role="tabpanel" hidden><label class="question-filter-field"><span class="question-filter-label">Finalidade da prova</span><select id="f-finalidade" multiple class="question-filter-multi"></select></label><p class="question-filter-help" data-metadata-help="finalidade">Opções baseadas nos metadados disponíveis nas questões.</p></div>
+                <div class="question-filter-group" data-filter-group="professor" role="tabpanel" hidden><label class="question-filter-field"><span class="question-filter-label">Professor / responsável pela resolução</span><select id="f-professor" multiple class="question-filter-multi"></select></label><p class="question-filter-help" data-metadata-help="professor">Opções baseadas nos metadados disponíveis nas questões.</p></div>
+                <div class="question-filter-group" data-filter-group="avancados" role="tabpanel" hidden>
+                  <section class="advanced-filter-section"><h3>Tipo de questão</h3><div class="advanced-filter-checks"><label><input type="checkbox" name="f-tipo" value="multipla_escolha"> Múltipla escolha</label><label><input type="checkbox" name="f-tipo" value="certo_errado"> Certo / Errado</label><label><input type="checkbox" name="f-tipo" value="discursiva"> Discursiva</label></div></section>
+                  <section class="advanced-filter-section"><h3>Soluções e vigência</h3><div class="question-filter-advanced-grid">
+                    <label class="question-filter-field"><span class="question-filter-label">Solução em texto</span><select id="f-solucao-texto" class="question-filter-select"><option value="">Todas</option><option value="com">Com solução em texto</option><option value="sem">Sem solução em texto</option></select></label>
+                    <label class="question-filter-field"><span class="question-filter-label">Solução em vídeo</span><select id="f-video" class="question-filter-select"><option value="">Todas</option><option value="com">Com vídeo</option><option value="sem">Sem vídeo</option></select></label>
+                    <label class="question-filter-field"><span class="question-filter-label">Vigência</span><select id="f-vigencia" class="question-filter-select"><option value="">Todas</option><option value="validas">Com gabarito válido</option><option value="anuladas">Anuladas / sem gabarito A–E</option><option value="desatualizadas">Desatualizadas</option></select></label>
+                  </div></section><p class="question-filter-help" id="advanced-filter-help">Os critérios de vídeo e vigência dependem dos metadados da base atual.</p>
+                </div>
+              </div>
+              <aside class="question-filter-summary" aria-live="polite">
+                <div class="question-summary-heading"><div><span class="question-filter-label">Sua seleção</span><h3>Incluir questões</h3></div><span class="question-count-pill"><strong id="questoes-count">—</strong><small>questões encontradas</small></span></div>
+                <div id="question-filter-summary-chips" class="question-filter-chips"><span class="question-summary-empty">Ajuste os filtros e confira as questões encontradas.</span></div>
+                <button type="button" class="question-filter-reset" onclick="redefinirFiltrosQuestao()">Redefinir filtros</button>
+              </aside>
+            </div>
+
             
             <!-- Barra de Botões Aprimorada (Corrigida para Mobile) -->
             <div class="flex flex-col md:flex-row gap-3 items-center justify-between border-t border-gray-100 pt-5">
@@ -97,6 +128,7 @@
             <div class="mt-4 flex flex-wrap md:hidden items-center gap-2" id="historico-container-mobile"></div>
         </div>
 
+        <div class="question-primary-actions"><button type="button" class="question-action-secondary" onclick="abrirModalLista()">Criar lista</button><button type="button" class="question-action-secondary" onclick="abrirModalSimulado()">Criar simulado</button><button type="button" class="question-action-primary" onclick="aplicarFiltros(1)">Ver questões →</button></div>
         <div id="questoes-container"></div>
         <div id="paginacao-container" class="flex flex-wrap justify-center gap-2 mt-6 mb-8"></div>
     </div>
@@ -117,7 +149,11 @@
         </div>
     </div>
 
-    <script src="/static/app.js?v=20261016-2"></script>
+
+    <div id="modal-lista" class="resp-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-lista-title"><div class="resp-modal-card"><div class="resp-modal-heading"><div><span class="resp-eyebrow">Nova coleção</span><h3 id="modal-lista-title">Criar lista</h3></div><button type="button" class="resp-icon-button" onclick="fecharModalLista()" aria-label="Fechar">×</button></div><label class="question-filter-field"><span class="question-filter-label">Nome da lista</span><input id="nome-lista" maxlength="100" placeholder="Ex.: Revisão de pediatria"></label><p class="question-filter-help">A lista será criada com as questões correspondentes aos filtros atuais. A coleção original não será alterada.</p><div class="resp-modal-actions"><button class="question-action-secondary" onclick="fecharModalLista()">Cancelar</button><button class="question-action-primary" id="btn-criar-lista" onclick="salvarListaAtual()">Salvar lista</button></div></div></div>
+    <div id="modal-simulado" class="resp-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-simulado-title"><div class="resp-modal-card"><div class="resp-modal-heading"><div><span class="resp-eyebrow">Prova personalizada</span><h3 id="modal-simulado-title">Criar novo simulado</h3></div><button type="button" class="resp-icon-button" onclick="fecharModalSimulado()" aria-label="Fechar">×</button></div><label class="question-filter-field"><span class="question-filter-label">Nome do simulado</span><input id="nome-simulado" maxlength="100" placeholder="Ex.: ENARE 2026"></label><div class="question-filter-advanced-grid"><label class="question-filter-field"><span class="question-filter-label">Horas</span><input id="tempo-simulado-h" type="number" min="0" max="24" value="3"></label><label class="question-filter-field"><span class="question-filter-label">Minutos</span><input id="tempo-simulado-m" type="number" min="0" max="59" value="45"></label></div><label class="question-filter-field"><span class="question-filter-label">Quantidade de questões</span><input id="qtd-simulado" type="number" min="1" max="10000" value="100"></label><p class="question-filter-help">O simulado usa os filtros atuais e salva a duração em minutos.</p><div class="resp-modal-actions"><button class="question-action-secondary" onclick="fecharModalSimulado()">Cancelar</button><button class="question-action-primary" id="btn-criar-simulado" onclick="salvarSimuladoAtual()">Criar simulado</button></div></div></div>
+
+    <script src="/static/app.js?v=20261017-2"></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             if(localStorage.getItem('hideTemas') === 'true') {

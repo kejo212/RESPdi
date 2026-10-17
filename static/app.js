@@ -9,6 +9,14 @@ let progressoUsuario = {};
 let cadernosUsuario = [];
 let historicoUsuario = [];
 let paginaAtual = 1;
+let listasUsuario = [];
+let simuladosUsuario = [];
+let favoritosUsuario = [];
+let tentativasUsuario = [];
+let anotacoesUsuario = [];
+let leitorConcluidoUsuario = false;
+let fonteLeitorUsuario = 16;
+let temporizadorSimulado = null;
 
 async function syncDB(tipo, dados) {
     if(currentUser === 'visitante') return;
@@ -167,13 +175,14 @@ async function aplicarFiltros(pagina = 1) {
     const aviso = document.getElementById('aviso-aleatorio');
     if (aviso) { (mats.length > 0 || palavra || statusProg !== 'todas') ? aviso.classList.add('hidden') : aviso.classList.remove('hidden'); }
     
-    const payload = { pagina: paginaAtual, limite: parseInt(limit), materia: mats, assunto: asss, subassunto: subs, palavraChave: palavra, statusProgresso: statusProg, feitas_ids: feitas, erradas_ids: erradas };
+    const payload = { pagina: paginaAtual, limite: parseInt(limit), materia: mats, assunto: asss, subassunto: subs, palavraChave: palavra, statusProgresso: statusProg, feitas_ids: feitas, erradas_ids: erradas, metadados: coletarMetadadosSelecionados(), filtrosAvancados: coletarFiltrosAvancados() };
     if(pagina === 1 && (mats.length > 0 || palavra || statusProg !== 'todas')) { registrarHistoricoFiltro(payload); }
 
     try {
         const res = await fetch('/api/questoes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
         const dados = await res.json();
         renderizarQuestoesUI(dados.questoes, false); renderizarPaginacaoUI(dados.total, parseInt(limit));
+        const contador=document.getElementById('questoes-count'); if(contador) contador.textContent=Number(dados.total||0).toLocaleString('pt-BR'); atualizarResumoFiltros();
         if(document.getElementById('f-mat')) window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch(e) {}
 }
@@ -303,6 +312,7 @@ function renderizarQuestoesUI(questoes, isCaderno = false) {
 }
 
 function responderMestre(id, escolhida, correta) {
+    tentativasUsuario.unshift({id:String(id),escolhida:escolhida,correta:correta,acertou:(escolhida===correta),timestamp:Date.now()}); if(tentativasUsuario.length>1000)tentativasUsuario=tentativasUsuario.slice(0,1000); syncDB('tentativas',tentativasUsuario);
     progressoUsuario[id] = { acertou: (escolhida === correta), escolhida: escolhida, timestamp: Date.now() }; syncDB('progresso', progressoUsuario);
     const botoes = document.getElementById(`alts-${id}`).getElementsByTagName('button');
     for (let btn of botoes) {
@@ -394,7 +404,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (currentUser !== 'visitante') {
         try {
             const res = await fetch(`/api/sync/${currentUser}`); const data = await res.json();
-            progressoUsuario = data.progresso || {}; cadernosUsuario = data.cadernos || []; historicoUsuario = data.historico || [];
+            progressoUsuario = data.progresso || {}; cadernosUsuario = data.cadernos || []; historicoUsuario = data.historico || []; listasUsuario = data.listas || []; simuladosUsuario = data.simulados || []; favoritosUsuario = data.favoritos || []; tentativasUsuario = data.tentativas || []; anotacoesUsuario = data.anotacoes || []; leitorConcluidoUsuario = data.leitorConcluido || false;
         } catch(e) {}
     }
     atualizarNumerosEstatisticas();
@@ -410,6 +420,146 @@ document.addEventListener("DOMContentLoaded", async () => {
         carregarLogsServidor(); 
         setInterval(carregarLogsServidor, 3000); 
     }
-    if(document.getElementById('f-mat')) { carregarFiltros().then(() => aplicarFiltros(1)); }
+    if(document.getElementById('f-mat')) { carregarFiltros().then(async () => { await carregarOpcoesMetadados(); bindQuestionFilterInterface(); const p=new URLSearchParams(location.search); const mat=p.get('materia'); if(mat){const el=document.getElementById('f-mat');Array.from(el.options).forEach(o=>{o.selected=o.value===mat;});el.dispatchEvent(new Event('change'));} await aplicarFiltros(1); const pending=p.get('acao')||localStorage.getItem('respPendingCollection'); if(pending==='lista')setTimeout(abrirModalLista,150); if(pending==='simulado')setTimeout(abrirModalSimulado,150); }); }
     if(document.getElementById('lista-cadernos')) { renderizarListaCadernos(); }
+    if(document.getElementById('listas-table-body')) { renderizarGerenciadorListas(); document.getElementById('busca-listas')?.addEventListener('input',renderizarGerenciadorListas); document.getElementById('tipo-listas')?.addEventListener('change',renderizarGerenciadorListas); document.getElementById('ordenar-listas')?.addEventListener('click',e=>{const b=e.currentTarget;b.dataset.order=b.dataset.order==='desc'?'asc':'desc';b.textContent=b.dataset.order==='desc'?'Criação ↓':'Criação ↑';renderizarGerenciadorListas();}); }
+    renderizarResumoDesempenho(); renderizarEstudosEmAndamento(); renderizarCatalogoMaterias(); renderizarListaFavoritos();
+    const reader=document.getElementById('ldi-anotacao'); if(reader){const note=anotacoesUsuario.find(n=>n.chave==='leitor-geral');if(note)reader.value=note.texto||'';fonteLeitorUsuario=parseInt(localStorage.getItem('respReaderFont')||'16',10);ajustarFonteLeitor(0);const status=document.getElementById('ldi-status'),btn=document.getElementById('btn-concluir-leitura');if(status)status.textContent=leitorConcluidoUsuario?'Leitura marcada como concluída':'Leitura não concluída';if(btn)btn.textContent=leitorConcluidoUsuario?'✓ Concluído':'○ Concluir';}
 });
+
+
+let listasUsuario = [];
+let simuladosUsuario = [];
+let favoritosUsuario = [];
+let tentativasUsuario = [];
+let anotacoesUsuario = [];
+let leitorConcluidoUsuario = false;
+let fonteLeitorUsuario = 16;
+let temporizadorSimulado = null;
+function textoSeguro(v){return String(v==null?'':v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function valorSelecionado(id){const el=document.getElementById(id);return el?String(el.value||'').trim():'';}
+function valoresSelecionados(id){const el=document.getElementById(id);return el?Array.from(el.selectedOptions).map(o=>o.value).filter(Boolean):[];}
+function mostrarToast(msg){const t=document.getElementById('module-toast');if(!t){alert(msg);return;}t.textContent=msg;t.classList.add('is-visible');if(window.respToastTimer)clearTimeout(window.respToastTimer);window.respToastTimer=setTimeout(()=>t.classList.remove('is-visible'),3500);}
+function executarAcaoModulo(acao){const routes={questoes:'/questoes',cadernos:'/cadernos',listas:'/listas',desempenho:'/desempenho',favoritos:'/favoritos',cursos:'/cursos',ldi:'/ldi'};if(routes[acao]){window.location.href=routes[acao];return;}mostrarNotificacoes();}
+function mostrarNotificacoes(){mostrarToast('Você não tem notificações novas.');}
+function coletarMetadadosSelecionados(){return{instituicao:valoresSelecionados('f-inst'),ano:valoresSelecionados('f-ano'),regiao:valoresSelecionados('f-regiao'),finalidade:valoresSelecionados('f-finalidade'),professor:valoresSelecionados('f-professor')};}
+function coletarFiltrosAvancados(){return{tipos:Array.from(document.querySelectorAll('input[name="f-tipo"]:checked')).map(e=>e.value),solucaoTexto:valorSelecionado('f-solucao-texto'),video:valorSelecionado('f-video'),vigencia:valorSelecionado('f-vigencia')};}
+function atualizarResumoFiltros(){
+ const box=document.getElementById('question-filter-summary-chips');if(!box)return;const chips=[];
+ [['Status','f-status',false],['Matéria','f-mat',true],['Assunto','f-ass',true],['Subassunto','f-sub',true],['Instituição','f-inst',true],['Ano','f-ano',true],['Região','f-regiao',true],['Finalidade','f-finalidade',true],['Professor','f-professor',true]].forEach(s=>{const el=document.getElementById(s[1]);if(!el)return;const opts=s[2]?Array.from(el.selectedOptions):(el.value&&el.value!=='todas'?[el.options[el.selectedIndex]]:[]);opts.forEach(o=>{if(o&&o.value)chips.push({id:s[1],value:o.value,text:o.textContent.trim()});});});
+ const word=valorSelecionado('f-busca');if(word)chips.push({id:'f-busca',value:word,text:'“'+word+'”'});
+ document.querySelectorAll('input[name="f-tipo"]:checked').forEach(e=>chips.push({id:'f-tipo',value:e.value,text:e.parentElement.textContent.trim()}));
+ [['f-solucao-texto','Solução'],['f-video','Vídeo'],['f-vigencia','Vigência']].forEach(s=>{const el=document.getElementById(s[0]);if(el&&el.value)chips.push({id:s[0],value:el.value,text:el.options[el.selectedIndex].textContent.trim()});});
+ box.innerHTML=chips.length?chips.map(c=>'<button type="button" class="question-filter-chip" data-chip-id="'+textoSeguro(c.id)+'" data-chip-value="'+textoSeguro(c.value)+'"><span>'+textoSeguro(c.text)+'</span><b>×</b></button>').join(''):'<span class="question-summary-empty">Sem filtros adicionais. O banco inteiro está selecionado.</span>';
+}
+function removerFiltroQuestao(id,value){
+ const el=document.getElementById(id);
+ if(id==='f-tipo')document.querySelectorAll('input[name="f-tipo"]').forEach(x=>{if(x.value===value)x.checked=false;});
+ else if(el&&el.multiple)Array.from(el.options).forEach(x=>{if(x.value===value)x.selected=false;});
+ else if(el)el.value=id==='f-status'?'todas':'';
+ if(id==='f-mat'){document.getElementById('f-ass').innerHTML='';document.getElementById('f-ass').disabled=true;document.getElementById('f-sub').innerHTML='';document.getElementById('f-sub').disabled=true;}
+ if(id==='f-ass'){document.getElementById('f-sub').innerHTML='';document.getElementById('f-sub').disabled=true;}
+ atualizarResumoFiltros();if(document.getElementById('f-mat'))aplicarFiltros(1);
+}
+function redefinirFiltrosQuestao(){
+ ['f-inst','f-ano','f-regiao','f-finalidade','f-professor','f-ass','f-sub'].forEach(id=>{const el=document.getElementById(id);if(el)Array.from(el.options).forEach(o=>o.selected=false);});
+ ['f-solucao-texto','f-video','f-vigencia'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+ document.querySelectorAll('input[name="f-tipo"]').forEach(el=>el.checked=false);
+ if(document.getElementById('f-status'))document.getElementById('f-status').value='todas';
+ if(document.getElementById('f-busca'))document.getElementById('f-busca').value='';
+ const mat=document.getElementById('f-mat');if(mat)Array.from(mat.options).forEach(o=>o.selected=false);
+ atualizarResumoFiltros();if(mat)aplicarFiltros(1);
+}
+function bindQuestionFilterInterface(){
+ document.querySelectorAll('[data-filter-tab]').forEach(btn=>btn.addEventListener('click',()=>{const target=btn.dataset.filterTab;document.querySelectorAll('[data-filter-tab]').forEach(b=>{const on=b===btn;b.classList.toggle('is-active',on);b.setAttribute('aria-selected',on?'true':'false');});document.querySelectorAll('[data-filter-group]').forEach(g=>{g.hidden=g.dataset.filterGroup!==target;g.classList.toggle('is-active',g.dataset.filterGroup===target);});}));
+ document.querySelectorAll('.question-filter-group select,#f-busca,input[name="f-tipo"]').forEach(el=>{el.addEventListener('change',atualizarResumoFiltros);el.addEventListener('input',atualizarResumoFiltros);});
+ const chips=document.getElementById('question-filter-summary-chips');if(chips)chips.addEventListener('click',e=>{const b=e.target.closest('[data-chip-id]');if(b)removerFiltroQuestao(b.dataset.chipId,b.dataset.chipValue);});
+ atualizarResumoFiltros();
+}
+async function carregarOpcoesMetadados(){
+ const ids={instituicao:'f-inst',ano:'f-ano',regiao:'f-regiao',finalidade:'f-finalidade',professor:'f-professor'};
+ try{
+  const response=await fetch('/api/questao-filtros');const data=await response.json();
+  Object.keys(ids).forEach(k=>{const el=document.getElementById(ids[k]);if(!el)return;el.innerHTML='';const opts=data.opcoes&&data.opcoes[k]?data.opcoes[k]:[];
+   if(!opts.length){const o=document.createElement('option');o.value='';o.textContent='Sem metadados disponíveis nesta base';o.disabled=true;el.appendChild(o);el.disabled=true;const help=document.querySelector('[data-metadata-help="'+k+'"]');if(help)help.textContent='A base atual não fornece os dados necessários para este filtro.';}
+   else{opts.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o);});el.disabled=false;}
+  });
+  const av=data.disponibilidade||{};const video=document.getElementById('f-video');if(video&&!av.video){video.disabled=true;const h=document.getElementById('advanced-filter-help');if(h)h.textContent='Não há metadados de vídeo disponíveis; o controle fica desativado até existir essa informação.';}
+  const vig=document.getElementById('f-vigencia');if(vig&&!av.vigencia)Array.from(vig.options).forEach(o=>{if(o.value==='desatualizadas')o.disabled=true;});
+ }catch(e){Object.values(ids).forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=true;el.innerHTML='<option>Metadados indisponíveis</option>';}});}
+}
+function montarPayloadFiltroCompleto(limite){
+ const feitas=Object.keys(progressoUsuario||{}),erradas=feitas.filter(id=>progressoUsuario[id]&&progressoUsuario[id].acertou===false),st=document.getElementById('f-status');
+ return{pagina:1,limite:limite||1000,materia:getSelectedValues('f-mat'),assunto:getSelectedValues('f-ass'),subassunto:getSelectedValues('f-sub'),palavraChave:valorSelecionado('f-busca'),statusProgresso:st&&st.value?st.value:'todas',feitas_ids:feitas,erradas_ids:erradas,metadados:coletarMetadadosSelecionados(),filtrosAvancados:coletarFiltrosAvancados()};
+}
+async function carregarQuestoesComFiltros(limit){const r=await fetch('/api/questoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(montarPayloadFiltroCompleto(limit))});const d=await r.json();if(!r.ok||d.erro_interno)throw new Error(d.erro_interno||'Não foi possível carregar questões.');return d;}
+function abrirModalLista(){const el=document.getElementById('modal-lista');if(el){el.classList.remove('hidden');document.body.classList.add('overflow-hidden');document.getElementById('nome-lista')?.focus();}}
+function fecharModalLista(){document.getElementById('modal-lista')?.classList.add('hidden');document.body.classList.remove('overflow-hidden');}
+async function salvarListaAtual(){
+ const input=document.getElementById('nome-lista'),nome=input?input.value.trim():'';if(!nome){mostrarToast('Informe um nome para a lista.');input?.focus();return;}
+ const btn=document.getElementById('btn-criar-lista');if(btn){btn.disabled=true;btn.textContent='Criando…';}
+ try{const data=await carregarQuestoesComFiltros(1000);if(!data.questoes?.length){mostrarToast('Nenhuma questão corresponde aos filtros atuais.');return;}
+ const folder=localStorage.getItem('respPastaDestino')||null;listasUsuario.push({id:Date.now().toString(),tipo:'lista',nome,data:new Date().toLocaleDateString('pt-BR'),criadaEm:Date.now(),questoes:data.questoes,filtro:montarPayloadFiltroCompleto(1000),pasta_id:folder});
+ await syncDB('listas',listasUsuario);localStorage.removeItem('respPendingCollection');localStorage.removeItem('respPastaDestino');fecharModalLista();mostrarToast('Lista criada com '+data.questoes.length+' questões.');if(location.pathname==='/listas')renderizarGerenciadorListas();else if(confirm('Lista salva. Abrir Listas e Simulados?'))location.href='/listas';
+ }catch(e){mostrarToast(e.message||'Erro ao criar a lista.');}finally{if(btn){btn.disabled=false;btn.textContent='Salvar lista';}}
+}
+function abrirModalSimulado(){const el=document.getElementById('modal-simulado');if(el){el.classList.remove('hidden');document.body.classList.add('overflow-hidden');document.getElementById('nome-simulado')?.focus();}}
+function fecharModalSimulado(){document.getElementById('modal-simulado')?.classList.add('hidden');document.body.classList.remove('overflow-hidden');}
+async function salvarSimuladoAtual(){
+ const n=document.getElementById('nome-simulado'),nome=n?n.value.trim():'',h=parseInt(valorSelecionado('tempo-simulado-h')||'0',10),m=parseInt(valorSelecionado('tempo-simulado-m')||'0',10),q=parseInt(valorSelecionado('qtd-simulado')||'0',10),duration=h*60+m;
+ if(!nome){mostrarToast('Informe um nome para o simulado.');n?.focus();return;}if(duration<=0||m<0||m>59||h<0||q<1){mostrarToast('Revise o tempo e a quantidade de questões.');return;}
+ const btn=document.getElementById('btn-criar-simulado');if(btn){btn.disabled=true;btn.textContent='Criando…';}
+ try{const data=await carregarQuestoesComFiltros(Math.min(q,1000));if(!data.questoes?.length){mostrarToast('Nenhuma questão corresponde aos filtros atuais.');return;}
+ const folder=localStorage.getItem('respPastaDestino')||null;simuladosUsuario.push({id:Date.now().toString(),tipo:'simulado',nome,data:new Date().toLocaleDateString('pt-BR'),criadaEm:Date.now(),duracaoMinutos:duration,questoes:data.questoes.slice(0,q),filtro:montarPayloadFiltroCompleto(Math.min(q,1000)),pasta_id:folder});
+ await syncDB('simulados',simuladosUsuario);localStorage.removeItem('respPendingCollection');localStorage.removeItem('respPastaDestino');fecharModalSimulado();mostrarToast('Simulado criado com '+Math.min(q,data.questoes.length)+' questões.');if(location.pathname==='/listas')renderizarGerenciadorListas();else if(confirm('Simulado salvo. Abrir Listas e Simulados?'))location.href='/listas';
+ }catch(e){mostrarToast(e.message||'Erro ao criar o simulado.');}finally{if(btn){btn.disabled=false;btn.textContent='Criar simulado';}}
+}
+function abrirCriacaoPorFiltro(tipo){localStorage.setItem('respPendingCollection',tipo);window.location.href='/questoes?acao='+encodeURIComponent(tipo);}
+function abrirModalPasta(){const el=document.getElementById('modal-pasta');if(el){el.classList.remove('hidden');document.body.classList.add('overflow-hidden');document.getElementById('nome-pasta')?.focus();}}
+function fecharModalPasta(){document.getElementById('modal-pasta')?.classList.add('hidden');document.body.classList.remove('overflow-hidden');}
+async function salvarPasta(){const input=document.getElementById('nome-pasta'),nome=input?input.value.trim():'';if(!nome){mostrarToast('Informe um nome para a pasta.');return;}listasUsuario.push({id:Date.now().toString(),tipo:'pasta',nome,data:new Date().toLocaleDateString('pt-BR'),criadaEm:Date.now(),pasta_id:new URLSearchParams(location.search).get('pasta')||null,questoes:[]});await syncDB('listas',listasUsuario);fecharModalPasta();input.value='';renderizarGerenciadorListas();mostrarToast('Pasta criada.');}
+function itemPorId(id){return listasUsuario.find(i=>String(i.id)===String(id))||simuladosUsuario.find(i=>String(i.id)===String(id));}
+function abrirPasta(id){location.href='/listas?pasta='+encodeURIComponent(id);}
+function mostrarColecaoSalva(item){if(!item)return;['listas-table-container','listas-mobile-cards','listas-empty','listas-summary'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));const a=document.getElementById('colecao-ativa');if(!a)return;a.classList.remove('hidden');document.getElementById('colecao-titulo').textContent=item.nome;document.getElementById('colecao-tipo').textContent=item.tipo==='simulado'?'Simulado':'Lista de questões';document.getElementById('colecao-detalhes').textContent=(item.questoes||[]).length+' questões · '+(item.data||'');const t=document.getElementById('simulado-timer-container');if(item.tipo==='simulado'&&item.duracaoMinutos){t.classList.remove('hidden');iniciarCronometroSimulado(item);}else{t.classList.add('hidden');pararCronometroSimulado();}renderizarQuestoesUI(item.questoes||[],true);}
+function fecharColecaoSalva(){pararCronometroSimulado();document.getElementById('colecao-ativa')?.classList.add('hidden');['listas-table-container','listas-mobile-cards','listas-summary'].forEach(id=>document.getElementById(id)?.classList.remove('hidden'));renderizarGerenciadorListas();}
+function iniciarCronometroSimulado(item){pararCronometroSimulado();let rest=Math.max(0,Number(item.duracaoMinutos)||0)*60;const el=document.getElementById('simulado-timer');const draw=()=>{if(el){const h=Math.floor(rest/3600),m=Math.floor(rest%3600/60),s=rest%60;el.textContent=(h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}};draw();temporizadorSimulado=setInterval(()=>{rest--;draw();if(rest<=0){pararCronometroSimulado();mostrarToast('O tempo configurado para o simulado terminou.');}},1000);}
+function pararCronometroSimulado(){if(temporizadorSimulado){clearInterval(temporizadorSimulado);temporizadorSimulado=null;}}
+function duplicarColecao(id,modo){const item=itemPorId(id);if(!item)return;let qs=item.questoes||[];if(modo==='erros')qs=qs.filter(q=>progressoUsuario[String(q.id)]&&progressoUsuario[String(q.id)].acertou===false);if(modo==='acertos')qs=qs.filter(q=>progressoUsuario[String(q.id)]&&progressoUsuario[String(q.id)].acertou===true);if(modo==='nao-respondidas')qs=qs.filter(q=>!progressoUsuario[String(q.id)]);if(modo==='respondidas')qs=qs.filter(q=>!!progressoUsuario[String(q.id)]);if(!qs.length){mostrarToast('Não há questões para duplicar com esse critério.');return;}const c=JSON.parse(JSON.stringify(item));c.id=Date.now().toString();c.nome=item.nome+' — '+(modo==='tudo'?'cópia':modo);c.data=new Date().toLocaleDateString('pt-BR');c.criadaEm=Date.now();c.questoes=qs;if(item.tipo==='simulado'){simuladosUsuario.push(c);syncDB('simulados',simuladosUsuario);}else{c.tipo='lista';listasUsuario.push(c);syncDB('listas',listasUsuario);}renderizarGerenciadorListas();mostrarToast('Cópia criada; a original foi preservada.');}
+function editarColecao(id){const x=itemPorId(id);if(!x)return;const name=prompt('Novo nome:',x.nome);if(name===null)return;if(!name.trim()){mostrarToast('O nome não pode ficar vazio.');return;}x.nome=name.trim();syncDB(x.tipo==='simulado'?'simulados':'listas',x.tipo==='simulado'?simuladosUsuario:listasUsuario);renderizarGerenciadorListas();}
+function excluirColecao(id){const x=itemPorId(id);if(!x||!confirm('Excluir "'+x.nome+'"? O histórico de respostas será preservado.'))return;if(x.tipo==='simulado'){simuladosUsuario=simuladosUsuario.filter(y=>String(y.id)!==String(id));syncDB('simulados',simuladosUsuario);}else{listasUsuario=listasUsuario.filter(y=>String(y.id)!==String(id));syncDB('listas',listasUsuario);}renderizarGerenciadorListas();mostrarToast('Coleção excluída.');}
+function alternarMenuColecao(id){const e=document.getElementById('menu-colecao-'+id);if(!e)return;document.querySelectorAll('.resp-row-menu').forEach(m=>{if(m!==e)m.classList.add('hidden');});e.classList.toggle('hidden');}
+function abrirItemColecao(id){const x=itemPorId(id);if(x&&x.tipo==='pasta')return abrirPasta(id);mostrarColecaoSalva(x);}
+function renderizarGerenciadorListas(){
+ const body=document.getElementById('listas-table-body');if(!body)return;const mob=document.getElementById('listas-mobile-cards'),params=new URLSearchParams(location.search),folder=params.get('pasta'),query=valorSelecionado('busca-listas').toLocaleLowerCase('pt-BR'),kind=valorSelecionado('tipo-listas')||'todos',order=document.getElementById('ordenar-listas')?.dataset.order||'desc';
+ let rows=[...listasUsuario,...simuladosUsuario].filter(x=>String(x.pasta_id||'')===String(folder||''));const folders=listasUsuario.filter(x=>x.tipo==='pasta'&&String(x.pasta_id||'')===String(folder||''));if(kind!=='todos')rows=rows.filter(x=>x.tipo===kind);if(query)rows=rows.filter(x=>(x.nome||'').toLocaleLowerCase('pt-BR').includes(query));rows.sort((a,b)=>(Number(a.criadaEm||0)-Number(b.criadaEm||0))*(order==='asc'?1:-1));if(kind==='todos'||kind==='pasta')rows=[...folders.filter(x=>!query||x.nome.toLocaleLowerCase('pt-BR').includes(query)),...rows.filter(x=>x.tipo!=='pasta')];else rows=rows.filter(x=>x.tipo!=='pasta');
+ const tq=document.getElementById('listas-total'),tq2=document.getElementById('listas-questoes-total');if(tq)tq.textContent=rows.length;if(tq2)tq2.textContent=rows.reduce((n,x)=>n+(x.questoes||[]).length,0);const empty=document.getElementById('listas-empty'),table=document.getElementById('listas-table-container');if(empty)empty.classList.toggle('hidden',rows.length>0);if(table)table.classList.toggle('hidden',rows.length===0);if(mob)mob.classList.toggle('hidden',rows.length===0);
+ const crumb=document.getElementById('listas-breadcrumb');if(crumb){const parent=folder?itemPorId(folder):null;crumb.innerHTML='<a href="/listas">Listas e simulados</a><span>›</span><strong>'+textoSeguro(parent?parent.nome:'Início')+'</strong>';}
+ function menu(x){const id=textoSeguro(x.id);return '<div class="resp-row-actions"><button class="resp-icon-button" onclick="alternarMenuColecao(\''+id+'\')" aria-label="Ações">⋮</button><div class="resp-row-menu hidden" id="menu-colecao-'+id+'">'+(x.tipo==='pasta'?'<button onclick="abrirPasta(\''+id+'\')">Abrir pasta</button>':'<button onclick="abrirItemColecao(\''+id+'\')">Abrir</button>')+'<button onclick="editarColecao(\''+id+'\')">Renomear</button>'+(x.tipo==='pasta'?'':'<button onclick="duplicarColecao(\''+id+'\',\'tudo\')">Duplicar</button><button onclick="duplicarColecao(\''+id+'\',\'erros\')">Duplicar erros</button><button onclick="duplicarColecao(\''+id+'\',\'acertos\')">Duplicar acertos</button><button onclick="duplicarColecao(\''+id+'\',\'nao-respondidas\')">Duplicar não respondidas</button><button onclick="duplicarColecao(\''+id+'\',\'respondidas\')">Duplicar respondidas</button>')+'<button onclick="excluirColecao(\''+id+'\')">Excluir</button></div></div>';}
+ function row(x){const id=textoSeguro(x.id),qs=x.questoes||[],done=qs.filter(q=>progressoUsuario[String(q.id)]).length,correct=qs.filter(q=>progressoUsuario[String(q.id)]&&progressoUsuario[String(q.id)].acertou).length,label=x.tipo==='pasta'?'Pasta':x.tipo==='simulado'?'Simulado':'Lista';return '<tr><td><button class="resp-collection-name" onclick="'+(x.tipo==='pasta'?'abrirPasta':'abrirItemColecao')+'(\''+id+'\')"><span class="resp-collection-icon">'+(x.tipo==='pasta'?'▰':x.tipo==='simulado'?'◷':'▤')+'</span><span><strong>'+textoSeguro(x.nome)+'</strong><small>'+label+'</small></span></button></td><td>'+label+'</td><td>'+textoSeguro(x.data||'—')+'</td><td>'+qs.length+'</td><td>'+done+'</td><td>'+correct+'</td><td>'+(done-correct)+'</td><td>'+menu(x)+'</td></tr>';}
+ body.innerHTML=rows.map(row).join('');
+ if(mob)mob.innerHTML=rows.map(x=>'<article class="resp-module-card"><h2>'+textoSeguro(x.nome)+'</h2><p>'+textoSeguro(x.data||'—')+' · '+(x.tipo==='simulado'?'Simulado':x.tipo==='pasta'?'Pasta':'Lista')+' · '+(x.questoes||[]).length+' questões</p><div class="resp-module-card-actions">'+(x.tipo==='pasta'?'<button class="question-action-primary" onclick="abrirPasta(\''+textoSeguro(x.id)+'\')">Abrir pasta</button>':'<button class="question-action-primary" onclick="abrirItemColecao(\''+textoSeguro(x.id)+'\')">Abrir</button>')+menu(x)+'</div></article>').join('');
+}
+function alternarFavoritoQuestao(id){const q=(window.respQuestionCache||{})[String(id)]||favoritosUsuario.find(x=>String(x.id)===String(id));if(!q){mostrarToast('Reabra a questão para atualizar o favorito.');return;}const i=favoritosUsuario.findIndex(x=>String(x.id)===String(id));if(i>=0)favoritosUsuario.splice(i,1);else favoritosUsuario.unshift(JSON.parse(JSON.stringify(q)));syncDB('favoritos',favoritosUsuario);renderizarListaFavoritos();mostrarToast(i>=0?'Questão removida dos favoritos.':'Questão salva nos favoritos.');}
+function mostrarHistoricoQuestao(id){const rs=tentativasUsuario.filter(t=>String(t.id)===String(id));if(!rs.length){mostrarToast('Ainda não há histórico individual para esta questão.');return;}alert('Histórico de respostas\n\n'+rs.slice(0,10).map((t,i)=>(i+1)+'. '+new Date(t.timestamp).toLocaleString('pt-BR')+' — '+(t.acertou?'Acerto':'Erro')+' · '+(t.escolhida||'—')).join('\n'));}
+function renderizarResumoDesempenho(){const ids=Object.keys(progressoUsuario||{}),correct=ids.filter(id=>progressoUsuario[id]?.acertou).length,wrong=ids.length-correct,rate=ids.length?Math.round(correct/ids.length*100):0;[['module-stat-total',ids.length],['module-stat-acertos',correct],['module-stat-erros',wrong],['module-stat-taxa',rate+'%']].forEach(p=>{const el=document.getElementById(p[0]);if(el)el.textContent=p[1];});const h=document.getElementById('desempenho-historico');if(h)h.innerHTML=tentativasUsuario.length?tentativasUsuario.slice(0,30).map(t=>'<div class="resp-activity-item"><span class="resp-activity-dot '+(t.acertou?'is-good':'is-error')+'"></span><div><strong>Questão '+textoSeguro(t.id)+'</strong><p>'+(t.acertou?'Resposta correta':'Resposta incorreta')+' · '+new Date(t.timestamp).toLocaleString('pt-BR')+'</p></div></div>').join(''):'<div class="resp-empty-inline">Respostas novas serão registradas aqui; o progresso já existente segue contabilizado acima.</div>';}
+function renderizarEstudosEmAndamento(){const c=document.getElementById('estudos-atividade');if(!c)return;c.innerHTML=tentativasUsuario.length?tentativasUsuario.slice(0,20).map(t=>'<div class="resp-activity-item"><span class="resp-activity-dot '+(t.acertou?'is-good':'is-error')+'"></span><div><strong>Questão '+textoSeguro(t.id)+'</strong><p>'+(t.acertou?'Acertou':'Errou')+' · '+new Date(t.timestamp).toLocaleString('pt-BR')+'</p></div><a href="/questoes">Praticar →</a></div>').join(''):'<div class="resp-empty-inline">Ainda não há tentativas detalhadas nesta versão. Abra o banco de questões para continuar estudando.</div>';}
+async function renderizarCatalogoMaterias(){const c=document.getElementById('areas-cursos');if(!c)return;try{const d=await(await fetch('/api/categorias')).json(),entries=Object.entries(d||{});c.innerHTML=entries.sort((a,b)=>a[0].localeCompare(b[0],'pt-BR')).map(e=>'<article class="resp-course-item"><span class="resp-course-icon">▤</span><div><h3>'+textoSeguro(e[0])+'</h3><p>'+Number(e[1].count||0).toLocaleString('pt-BR')+' questões no banco</p></div><a href="/questoes?materia='+encodeURIComponent(e[0])+'">Estudar →</a></article>').join('')||'<div class="resp-empty-inline">Nenhuma categoria disponível.</div>';}catch(e){c.innerHTML='<div class="resp-empty-inline">Não foi possível carregar as categorias.</div>';}}
+function renderizarListaFavoritos(){if(!document.querySelector('.page-module-favoritos'))return;const q=favoritosUsuario.filter(x=>x&&x.enunciado&&Array.isArray(x.alternativas));const c=document.getElementById('questoes-container');if(!c)return;if(!q.length)c.innerHTML='<div class="resp-empty-inline">Você ainda não tem questões favoritas. Use “Favoritar” em uma questão do banco.</div>';else renderizarQuestoesUI(q,true);}
+function salvarAnotacaoLeitor(){const input=document.getElementById('ldi-anotacao');if(!input)return;const value=input.value.trim();anotacoesUsuario=anotacoesUsuario.filter(n=>n.chave!=='leitor-geral');if(value)anotacoesUsuario.push({chave:'leitor-geral',texto:value,atualizadaEm:Date.now()});syncDB('anotacoes',anotacoesUsuario);const msg=document.getElementById('ldi-anotacao-salva');if(msg)msg.textContent=value?'Anotação salva em '+new Date().toLocaleString('pt-BR'):'Anotação removida.';mostrarToast(value?'Anotação salva.':'Anotação removida.');}
+function ajustarFonteLeitor(delta){fonteLeitorUsuario=Math.min(26,Math.max(13,(Number(fonteLeitorUsuario)||16)+delta));const e=document.getElementById('ldi-demo-text');if(e)e.style.fontSize=fonteLeitorUsuario+'px';localStorage.setItem('respReaderFont',String(fonteLeitorUsuario));}
+function alternarConclusaoLeitor(){leitorConcluidoUsuario=!leitorConcluidoUsuario;syncDB('leitorConcluido',leitorConcluidoUsuario);const s=document.getElementById('ldi-status'),b=document.getElementById('btn-concluir-leitura');if(s)s.textContent=leitorConcluidoUsuario?'Leitura marcada como concluída':'Leitura não concluída';if(b)b.textContent=leitorConcluidoUsuario?'✓ Concluído':'○ Concluir';}
+function alternarFavoritoLeitor(){const i=favoritosUsuario.findIndex(q=>q.tipo==='material'&&q.id==='ldi-leitor');if(i>=0)favoritosUsuario.splice(i,1);else favoritosUsuario.push({id:'ldi-leitor',tipo:'material',nome:'Leitor de estudo'});syncDB('favoritos',favoritosUsuario);mostrarToast('Preferência de favorito atualizada.');}
+
+
+
+const renderizarQuestoesBaseSuite=renderizarQuestoesUI;
+renderizarQuestoesUI=function(questoes,isCaderno=false){
+ window.respQuestionCache=window.respQuestionCache||{};(questoes||[]).forEach(q=>window.respQuestionCache[String(q.id)]=q);
+ renderizarQuestoesBaseSuite(questoes,isCaderno);
+ document.querySelectorAll('#questoes-container > div').forEach(card=>{const m=card.innerHTML.match(/id="alts-([^"]+)"/),id=m?m[1]:'';if(!id)return;const footer=card.querySelector('div.flex.justify-between.items-center.mt-6');if(!footer||footer.querySelector('[data-question-action="favorite"]'))return;
+ const hist=document.createElement('button');hist.type='button';hist.className='resp-question-action';hist.dataset.questionAction='history';hist.dataset.questionId=id;hist.textContent='Histórico';footer.insertBefore(hist,footer.lastElementChild);
+ const active=favoritosUsuario.some(q=>String(q.id)===String(id));const fav=document.createElement('button');fav.type='button';fav.className='resp-question-action'+(active?' is-favorite':'');fav.dataset.questionAction='favorite';fav.dataset.questionId=id;fav.textContent=active?'★ Favoritada':'☆ Favoritar';footer.insertBefore(fav,footer.lastElementChild);
+ });
+};
+document.addEventListener('click',e=>{const a=e.target.closest('[data-question-action]');if(a){const id=a.dataset.questionId;if(a.dataset.questionAction==='favorite')alternarFavoritoQuestao(id);if(a.dataset.questionAction==='history')mostrarHistoricoQuestao(id);}if(!e.target.closest('.resp-row-actions'))document.querySelectorAll('.resp-row-menu').forEach(x=>x.classList.add('hidden'));});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){['modal-lista','modal-simulado','modal-pasta','modal-caderno'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));document.body.classList.remove('overflow-hidden');document.querySelectorAll('.resp-row-menu').forEach(x=>x.classList.add('hidden'));}});

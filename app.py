@@ -223,6 +223,50 @@ def obter_categorias():
         with open(os.path.join(BASE_DIR, 'filtros.json'), 'r', encoding='utf-8') as f: return jsonify(json.load(f))
     except: return jsonify({"erro_interno": "Filtros não encontrados."})
 
+
+METADATA_ALIASES = {
+ "instituicao":["instituicao","instituição","nome_instituicao","instituicao_prova","banca","orgao","órgão"],
+ "ano":["ano","ano_prova","year","ano_concurso"],
+ "regiao":["regiao","região","uf","estado","localidade"],
+ "finalidade":["finalidade","tipo_prova","categoria_prova","objetivo","tipo_concurso"],
+ "professor":["professor","docente","responsavel_resolucao","responsável_resolução"],
+ "video":["tem_video","tem_video_resolucao","solucao_video","solução_video","video_resolucao","url_video","video"],
+ "tipo":["tipo_questao","tipo","formato_questao"],
+ "vigencia":["vigencia","vigência","status_vigencia","status_questao"]
+}
+def _valor_metadado(questao,campo):
+    for chave in METADATA_ALIASES.get(campo,[campo]):
+        if chave in questao and questao.get(chave) not in (None,""):
+            valor=questao.get(chave)
+            if isinstance(valor,(list,tuple,set)): valor=", ".join(str(x) for x in valor if x not in (None,""))
+            if isinstance(valor,bool): valor="sim" if valor else "nao"
+            if isinstance(valor,dict): valor=valor.get("nome",valor.get("label",valor.get("valor","")))
+            return str(valor).strip()
+    return ""
+def _normalizar_valores(valor):
+    if valor is None or valor=="": return []
+    if isinstance(valor,list): return [str(x).strip().casefold() for x in valor if str(x).strip()]
+    return [str(valor).strip().casefold()]
+def _metadados_saida(questao):
+    saida={}
+    for campo in ["instituicao","ano","regiao","finalidade","professor"]:
+        valor=_valor_metadado(questao,campo)
+        if valor: saida[campo]=valor
+    return saida
+
+@app.route('/api/questao-filtros', methods=['GET'])
+def obter_opcoes_filtros_questoes():
+    opcoes={campo:set() for campo in ["instituicao","ano","regiao","finalidade","professor"]}
+    tem_video=False
+    tem_vigencia=False
+    for questao in banco_questoes:
+        for campo in opcoes:
+            valor=_valor_metadado(questao,campo)
+            if valor: opcoes[campo].add(valor)
+        tem_video=tem_video or bool(_valor_metadado(questao,"video"))
+        tem_vigencia=tem_vigencia or bool(_valor_metadado(questao,"vigencia"))
+    return jsonify({"opcoes":{campo:sorted(list(valores),key=lambda x:x.casefold())[:500] for campo,valores in opcoes.items()},"disponibilidade":{"video":tem_video,"vigencia":tem_vigencia,**{campo:bool(valores) for campo,valores in opcoes.items()}}})
+
 @app.route('/api/questoes', methods=['POST'])
 def obter_questoes():
     try:
@@ -231,6 +275,8 @@ def obter_questoes():
         ass_raw = f.get('assunto', [])
         sub_raw = f.get('subassunto', [])
         palavra = str(f.get('palavraChave', '')).lower()
+        metadados_filtro = f.get('metadados', {}) or {}
+        filtros_avancados = f.get('filtrosAvancados', {}) or {}
         
         status_prog = str(f.get('statusProgresso', 'todas'))
         feitas = set(f.get('feitas_ids', []))
@@ -283,11 +329,42 @@ def obter_questoes():
                 if palavra not in en and palavra not in co: continue
             
             alts_brutas = q.get("alternativas", [])
+            alternativas = [str(x) for x in alts_brutas] if isinstance(alts_brutas, list) else []
+            gabarito = str(q.get("gabarito_letra", "X")).strip().upper()
+            comentario = str(q.get("comentario", ""))
+            mismatch = False
+            for campo in ["instituicao","ano","regiao","finalidade","professor"]:
+                escolhidos = _normalizar_valores(metadados_filtro.get(campo))
+                if escolhidos and _valor_metadado(q,campo).casefold() not in escolhidos:
+                    mismatch = True
+                    break
+            if mismatch: continue
+            tipos = _normalizar_valores(filtros_avancados.get("tipos"))
+            tipo_real = _valor_metadado(q,"tipo").casefold()
+            if not tipo_real: tipo_real = "multipla_escolha" if len(alternativas)>=3 else ("certo_errado" if len(alternativas)==2 else "discursiva")
+            tipo_alias = {"múltipla escolha":"multipla_escolha","multipla escolha":"multipla_escolha","certo/errado":"certo_errado","certo e errado":"certo_errado"}
+            tipo_real = tipo_alias.get(tipo_real,tipo_real.replace(" ","_"))
+            if tipos and tipo_real not in tipos: continue
+            solucao_texto = str(filtros_avancados.get("solucaoTexto", "")).casefold()
+            tem_texto = bool(comentario.strip())
+            if solucao_texto=="com" and not tem_texto: continue
+            if solucao_texto=="sem" and tem_texto: continue
+            video_valor = _valor_metadado(q,"video").casefold()
+            tem_video_questao = video_valor in ["sim","true","1","yes","com","video","vídeo"] or (video_valor.startswith("http") and "video" in video_valor)
+            filtro_video = str(filtros_avancados.get("video", "")).casefold()
+            if filtro_video=="com" and not tem_video_questao: continue
+            if filtro_video=="sem" and tem_video_questao: continue
+            vigencia_filtro = str(filtros_avancados.get("vigencia", "")).casefold()
+            if vigencia_filtro=="anuladas" and gabarito in ["A","B","C","D","E"]: continue
+            if vigencia_filtro=="validas" and gabarito not in ["A","B","C","D","E"]: continue
+            if vigencia_filtro=="desatualizadas" and _valor_metadado(q,"vigencia").casefold() not in ["desatualizada","desatualizadas","inativa","obsoleta","obsoleto"]: continue
             filtradas.append({
                 "id": q_id, "temas_dinamicos": [m, a, s],
                 "enunciado": str(q.get("enunciado", "")),
-                "alternativas": [str(x) for x in alts_brutas] if isinstance(alts_brutas, list) else [],
-                "gabarito_letra": str(q.get("gabarito_letra", "X")).strip().upper(), "comentario": str(q.get("comentario", ""))
+                "alternativas": alternativas,
+                "gabarito_letra": gabarito, "comentario": comentario,
+                "metadados": _metadados_saida(q), "tem_video": tem_video_questao,
+                "tipo_questao": tipo_real, "anulada": gabarito not in ["A","B","C","D","E"]
             })
             
         pagina = int(f.get('pagina', 1))
