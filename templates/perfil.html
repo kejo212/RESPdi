@@ -49,6 +49,8 @@
             if(document.getElementById('sidebar-avatar') && user) {
                 document.getElementById('sidebar-avatar').innerText = user.charAt(0).toUpperCase();
             }
+            if(document.getElementById('topbar-username') && user) document.getElementById('topbar-username').innerText = user;
+            if(document.getElementById('topbar-avatar') && user) document.getElementById('topbar-avatar').innerText = user.charAt(0).toUpperCase();
         });
 
         document.getElementById('logout-btn').addEventListener('click', () => {
