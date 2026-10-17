@@ -458,8 +458,8 @@ function removerFiltroQuestao(id,value){
  if(id==='f-tipo')document.querySelectorAll('input[name="f-tipo"]').forEach(x=>{if(x.value===value)x.checked=false;});
  else if(el&&el.multiple)Array.from(el.options).forEach(x=>{if(x.value===value)x.selected=false;});
  else if(el)el.value=id==='f-status'?'todas':'';
- if(id==='f-mat'){document.getElementById('f-ass').innerHTML='';document.getElementById('f-ass').disabled=true;document.getElementById('f-sub').innerHTML='';document.getElementById('f-sub').disabled=true;}
- if(id==='f-ass'){document.getElementById('f-sub').innerHTML='';document.getElementById('f-sub').disabled=true;}
+ if(id==='f-mat'){document.getElementById('f-ass').innerHTML='';document.getElementById('f-ass').disabled=true;document.getElementById('f-sub').innerHTML='';document.getElementById('f-sub').disabled=true;el?.dispatchEvent(new Event('change'));}
+ if(id==='f-ass'){document.getElementById('f-sub').innerHTML='';document.getElementById('f-sub').disabled=true;el?.dispatchEvent(new Event('change'));}
  atualizarResumoFiltros();if(document.getElementById('f-mat'))aplicarFiltros(1);
 }
 function redefinirFiltrosQuestao(){
@@ -508,14 +508,14 @@ function abrirModalSimulado(){const el=document.getElementById('modal-simulado')
 function fecharModalSimulado(){document.getElementById('modal-simulado')?.classList.add('hidden');document.body.classList.remove('overflow-hidden');}
 async function salvarSimuladoAtual(){
  const n=document.getElementById('nome-simulado'),nome=n?n.value.trim():'',h=parseInt(valorSelecionado('tempo-simulado-h')||'0',10),m=parseInt(valorSelecionado('tempo-simulado-m')||'0',10),q=parseInt(valorSelecionado('qtd-simulado')||'0',10),duration=h*60+m;
- if(!nome){mostrarToast('Informe um nome para o simulado.');n?.focus();return;}if(duration<=0||m<0||m>59||h<0||q<1){mostrarToast('Revise o tempo e a quantidade de questões.');return;}
+ if(!nome){mostrarToast('Informe um nome para o simulado.');n?.focus();return;}if(duration<=0||m<0||m>59||h<0||q<1||q>1000){mostrarToast('Revise o tempo e a quantidade de questões.');return;}
  const btn=document.getElementById('btn-criar-simulado');if(btn){btn.disabled=true;btn.textContent='Criando…';}
  try{const data=await carregarQuestoesComFiltros(Math.min(q,1000));if(!data.questoes?.length){mostrarToast('Nenhuma questão corresponde aos filtros atuais.');return;}
  const folder=localStorage.getItem('respPastaDestino')||null;simuladosUsuario.push({id:Date.now().toString(),tipo:'simulado',nome,data:new Date().toLocaleDateString('pt-BR'),criadaEm:Date.now(),duracaoMinutos:duration,questoes:data.questoes.slice(0,q),filtro:montarPayloadFiltroCompleto(Math.min(q,1000)),pasta_id:folder});
  await syncDB('simulados',simuladosUsuario);localStorage.removeItem('respPendingCollection');localStorage.removeItem('respPastaDestino');fecharModalSimulado();mostrarToast('Simulado criado com '+Math.min(q,data.questoes.length)+' questões.');if(location.pathname==='/listas')renderizarGerenciadorListas();else if(confirm('Simulado salvo. Abrir Listas e Simulados?'))location.href='/listas';
  }catch(e){mostrarToast(e.message||'Erro ao criar o simulado.');}finally{if(btn){btn.disabled=false;btn.textContent='Criar simulado';}}
 }
-function abrirCriacaoPorFiltro(tipo){localStorage.setItem('respPendingCollection',tipo);window.location.href='/questoes?acao='+encodeURIComponent(tipo);}
+function abrirCriacaoPorFiltro(tipo){localStorage.setItem('respPendingCollection',tipo);localStorage.setItem('respPastaDestino',new URLSearchParams(location.search).get('pasta')||'');window.location.href='/questoes?acao='+encodeURIComponent(tipo);}
 function abrirModalPasta(){const el=document.getElementById('modal-pasta');if(el){el.classList.remove('hidden');document.body.classList.add('overflow-hidden');document.getElementById('nome-pasta')?.focus();}}
 function fecharModalPasta(){document.getElementById('modal-pasta')?.classList.add('hidden');document.body.classList.remove('overflow-hidden');}
 async function salvarPasta(){const input=document.getElementById('nome-pasta'),nome=input?input.value.trim():'';if(!nome){mostrarToast('Informe um nome para a pasta.');return;}listasUsuario.push({id:Date.now().toString(),tipo:'pasta',nome,data:new Date().toLocaleDateString('pt-BR'),criadaEm:Date.now(),pasta_id:new URLSearchParams(location.search).get('pasta')||null,questoes:[]});await syncDB('listas',listasUsuario);fecharModalPasta();input.value='';renderizarGerenciadorListas();mostrarToast('Pasta criada.');}
