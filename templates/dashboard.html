@@ -6,6 +6,7 @@
     <title>RESPdi - Início</title>
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/theme.css?v=20261016-1">
     
     <style>
         .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
@@ -15,7 +16,7 @@
         .terminal-scroll::-webkit-scrollbar-thumb { background: #4B5563; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-gray-50 font-sans text-gray-800 pb-24 md:pb-10 overflow-x-hidden w-full">
+<body class="page-dashboard bg-gray-50 font-sans text-gray-800 pb-24 md:pb-10 overflow-x-hidden w-full">
     
     {% include 'sidebar.html' %}
     
@@ -25,7 +26,7 @@
         <p class="text-gray-500 mb-8 text-sm md:text-base">Acompanhe seu desempenho e acesse seus materiais.</p>
         
         <!-- Estatísticas Globais -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8 w-full">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8 w-full dashboard-stats">
             <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
                 <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Total Resolvido</p>
                 <p class="text-3xl md:text-4xl font-black mt-2 text-gray-800" id="stat-total">0</p>
@@ -52,7 +53,7 @@
             </div>
         </div>
 
-        <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 w-full">
+        <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 w-full dashboard-materials">
             <h2 class="text-xl md:text-2xl font-black text-gray-800 mb-2 flex items-center gap-2">
                 <svg class="w-5 h-5 md:w-6 md:h-6 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 3.8l6.4 12.7H5.6L12 5.8z"/></svg> 
                 Materiais de Estudo

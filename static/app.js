@@ -399,6 +399,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     atualizarNumerosEstatisticas();
     if(document.getElementById('sidebar-avatar') && currentUser) document.getElementById('sidebar-avatar').innerText = currentUser.charAt(0).toUpperCase();
+    const topbarUsername = document.getElementById('topbar-username');
+    const topbarAvatar = document.getElementById('topbar-avatar');
+    if(topbarUsername && currentUser !== 'visitante') topbarUsername.innerText = currentUser;
+    if(topbarAvatar && currentUser) topbarAvatar.innerText = currentUser.charAt(0).toUpperCase();
     if (currentUser === 'davi' && document.getElementById('admin-panel')) { 
         document.getElementById('admin-panel').classList.remove('hidden'); 
         carregarConfigGlobal();
