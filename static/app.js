@@ -468,7 +468,38 @@ document.addEventListener("DOMContentLoaded", async () => {
 function textoSeguro(v){return String(v==null?'':v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function valorSelecionado(id){const el=document.getElementById(id);return el?String(el.value||'').trim():'';}
 function valoresSelecionados(id){const el=document.getElementById(id);return el?Array.from(el.selectedOptions).map(o=>o.value).filter(Boolean):[];}
-function mostrarToast(msg){const t=document.getElementById('module-toast');if(!t){alert(msg);return;}t.textContent=msg;t.classList.add('is-visible');if(window.respToastTimer)clearTimeout(window.respToastTimer);window.respToastTimer=setTimeout(()=>t.classList.remove('is-visible'),3500);}
+function mostrarToast(msg, opcoes = {}) {
+    let host = document.getElementById('resp-notification-stack');
+    if (!host) {
+        host = document.createElement('div');
+        host.id = 'resp-notification-stack';
+        host.setAttribute('aria-live', 'polite');
+        host.setAttribute('aria-relevant', 'additions');
+        host.setAttribute('aria-atomic', 'false');
+        document.body.appendChild(host);
+    }
+    const card = document.createElement('article');
+    card.className = 'resp-notification';
+    card.setAttribute('role', 'status');
+    card.innerHTML = `
+        <span class="resp-notification-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg></span>
+        <span class="resp-notification-copy"><strong class="resp-notification-title"></strong><span class="resp-notification-message"></span></span>
+        <button type="button" class="resp-notification-close" aria-label="Fechar notificação">×</button>`;
+    card.querySelector('.resp-notification-title').textContent = String(opcoes.titulo || 'RESPdi');
+    card.querySelector('.resp-notification-message').textContent = String(msg == null ? '' : msg);
+    let removendo = false;
+    const remover = () => {
+        if (removendo) return;
+        removendo = true;
+        clearTimeout(card._respNotificationTimer);
+        card.classList.add('is-leaving');
+        setTimeout(() => card.remove(), 220);
+    };
+    card.querySelector('.resp-notification-close').addEventListener('click', remover);
+    card._respNotificationTimer = setTimeout(remover, 4500);
+    host.appendChild(card);
+    while (host.children.length > 4) host.firstElementChild.remove();
+}
 function executarAcaoModulo(acao){const routes={questoes:'/questoes',cadernos:'/cadernos',listas:'/listas',desempenho:'/desempenho',favoritos:'/favoritos',cursos:'/cursos',ldi:'/ldi'};if(routes[acao]){window.location.href=routes[acao];return;}mostrarNotificacoes();}
 function mostrarNotificacoes(){mostrarToast('Você não tem notificações novas.');}
 function coletarMetadadosSelecionados(){return{instituicao:valoresSelecionados('f-inst'),ano:valoresSelecionados('f-ano'),regiao:valoresSelecionados('f-regiao'),finalidade:valoresSelecionados('f-finalidade'),professor:valoresSelecionados('f-professor')};}
@@ -568,8 +599,100 @@ function renderizarGerenciadorListas(){
  body.innerHTML=rows.map(row).join('');
  if(mob)mob.innerHTML=rows.map(x=>'<article class="resp-module-card"><h2>'+textoSeguro(x.nome)+'</h2><p>'+textoSeguro(x.data||'—')+' · '+(x.tipo==='simulado'?'Simulado':x.tipo==='pasta'?'Pasta':'Lista')+' · '+(x.questoes||[]).length+' questões</p><div class="resp-module-card-actions">'+(x.tipo==='pasta'?'<button class="question-action-primary" onclick="abrirPasta(\''+textoSeguro(x.id)+'\')">Abrir pasta</button>':'<button class="question-action-primary" onclick="abrirItemColecao(\''+textoSeguro(x.id)+'\')">Abrir</button>')+menu(x)+'</div></article>').join('');
 }
-function alternarFavoritoQuestao(id){const q=(window.respQuestionCache||{})[String(id)]||favoritosUsuario.find(x=>String(x.id)===String(id));if(!q){mostrarToast('Reabra a questão para atualizar o favorito.');return;}const i=favoritosUsuario.findIndex(x=>String(x.id)===String(id));if(i>=0)favoritosUsuario.splice(i,1);else favoritosUsuario.unshift(JSON.parse(JSON.stringify(q)));syncDB('favoritos',favoritosUsuario);renderizarListaFavoritos();mostrarToast(i>=0?'Questão removida dos favoritos.':'Questão salva nos favoritos.');}
-function mostrarHistoricoQuestao(id){const rs=tentativasUsuario.filter(t=>String(t.id)===String(id));if(!rs.length){mostrarToast('Ainda não há histórico individual para esta questão.');return;}alert('Histórico de respostas\n\n'+rs.slice(0,10).map((t,i)=>(i+1)+'. '+new Date(t.timestamp).toLocaleString('pt-BR')+' — '+(t.acertou?'Acerto':'Erro')+' · '+(t.escolhida||'—')).join('\n'));}
+function alternarFavoritoQuestao(id) {
+    const questaoId = String(id);
+    const questao = (window.respQuestionCache || {})[questaoId]
+        || favoritosUsuario.find(item => String(item.id) === questaoId);
+    if (!questao) {
+        mostrarToast('Não foi possível localizar os dados desta questão.', { titulo: 'Favoritos' });
+        return;
+    }
+    const indice = favoritosUsuario.findIndex(item => String(item.id) === questaoId);
+    const foiFavoritada = indice < 0;
+    if (foiFavoritada) favoritosUsuario.unshift(JSON.parse(JSON.stringify(questao)));
+    else favoritosUsuario.splice(indice, 1);
+    syncDB('favoritos', favoritosUsuario);
+
+    document.querySelectorAll('[data-question-action="favorite"]').forEach(botao => {
+        if (String(botao.dataset.questionId) !== questaoId) return;
+        botao.classList.toggle('is-favorite', foiFavoritada);
+        botao.textContent = foiFavoritada ? '★' : '☆';
+        botao.setAttribute('aria-pressed', String(foiFavoritada));
+        botao.setAttribute('aria-label', foiFavoritada
+            ? 'Remover questão ' + questaoId + ' dos favoritos'
+            : 'Favoritar questão ' + questaoId);
+        botao.title = foiFavoritada ? 'Remover dos favoritos' : 'Favoritar questão';
+    });
+
+    renderizarListaFavoritos();
+    mostrarToast(
+        foiFavoritada
+            ? 'Questão ID ' + questaoId + ' foi favoritada.'
+            : 'Questão ID ' + questaoId + ' foi removida dos favoritos.',
+        { titulo: 'Favoritos' }
+    );
+}
+
+function mostrarHistoricoQuestao(id) {
+    const questaoId = String(id);
+    const respostas = tentativasUsuario
+        .filter(tentativa => String(tentativa.id) === questaoId)
+        .slice()
+        .sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+
+    let modal = document.getElementById('resp-history-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'resp-history-modal';
+        modal.className = 'resp-modal-backdrop resp-history-backdrop';
+        modal.addEventListener('click', evento => {
+            if (evento.target === modal) fecharModalHistoricoQuestao();
+        });
+        document.body.appendChild(modal);
+    }
+
+    const linhas = respostas.length
+        ? respostas.map((tentativa, indice) => {
+            const data = tentativa.timestamp
+                ? new Date(Number(tentativa.timestamp)).toLocaleString('pt-BR')
+                : 'Data não disponível';
+            const resultado = tentativa.acertou ? 'Acerto' : 'Erro';
+            const classeResultado = tentativa.acertou ? 'is-good' : 'is-error';
+            const escolhida = textoSeguro(tentativa.escolhida || '—');
+            const correta = tentativa.correta
+                ? '<span>Gabarito: <strong>' + textoSeguro(tentativa.correta) + '</strong></span>'
+                : '';
+            return `
+                <article class="resp-history-row">
+                    <div class="resp-history-row-heading"><strong>Tentativa ${indice + 1}</strong><span class="resp-history-result ${classeResultado}">${resultado}</span></div>
+                    <p>${data}</p>
+                    <div class="resp-history-details"><span>Marcada: <strong>${escolhida}</strong></span>${correta}</div>
+                </article>`;
+        }).join('')
+        : '<div class="resp-history-empty"><strong>Nenhuma resposta registrada</strong><p>Esta questão ainda não tem tentativas no histórico.</p></div>';
+
+    modal.innerHTML = `
+        <section class="resp-modal-card resp-history-card" role="dialog" aria-modal="true" aria-labelledby="resp-history-title" tabindex="-1">
+            <header class="resp-modal-heading resp-history-heading">
+                <div><span class="resp-eyebrow">Registro de respostas</span><h3 id="resp-history-title">Histórico da questão ID ${textoSeguro(questaoId)}</h3><p>${respostas.length} ${respostas.length === 1 ? 'tentativa registrada' : 'tentativas registradas'}</p></div>
+                <button type="button" class="resp-icon-button resp-history-close" aria-label="Fechar histórico">×</button>
+            </header>
+            <div class="resp-history-list">${linhas}</div>
+            <footer class="resp-history-footer"><button type="button" class="question-action-primary resp-history-close">Fechar</button></footer>
+        </section>`;
+    modal.querySelectorAll('.resp-history-close').forEach(botao => {
+        botao.addEventListener('click', fecharModalHistoricoQuestao);
+    });
+    document.body.classList.add('overflow-hidden');
+    modal.querySelector('.resp-history-card').focus();
+}
+
+function fecharModalHistoricoQuestao() {
+    const modal = document.getElementById('resp-history-modal');
+    if (modal) modal.remove();
+    document.body.classList.remove('overflow-hidden');
+}
+
 function renderizarResumoDesempenho(){const ids=Object.keys(progressoUsuario||{}),correct=ids.filter(id=>progressoUsuario[id]?.acertou).length,wrong=ids.length-correct,rate=ids.length?Math.round(correct/ids.length*100):0;[['module-stat-total',ids.length],['module-stat-acertos',correct],['module-stat-erros',wrong],['module-stat-taxa',rate+'%']].forEach(p=>{const el=document.getElementById(p[0]);if(el)el.textContent=p[1];});const h=document.getElementById('desempenho-historico');if(h)h.innerHTML=tentativasUsuario.length?tentativasUsuario.slice(0,30).map(t=>'<div class="resp-activity-item"><span class="resp-activity-dot '+(t.acertou?'is-good':'is-error')+'"></span><div><strong>Questão '+textoSeguro(t.id)+'</strong><p>'+(t.acertou?'Resposta correta':'Resposta incorreta')+' · '+new Date(t.timestamp).toLocaleString('pt-BR')+'</p></div></div>').join(''):'<div class="resp-empty-inline">Respostas novas serão registradas aqui; o progresso já existente segue contabilizado acima.</div>';}
 function renderizarEstudosEmAndamento(){const c=document.getElementById('estudos-atividade');if(!c)return;c.innerHTML=tentativasUsuario.length?tentativasUsuario.slice(0,20).map(t=>'<div class="resp-activity-item"><span class="resp-activity-dot '+(t.acertou?'is-good':'is-error')+'"></span><div><strong>Questão '+textoSeguro(t.id)+'</strong><p>'+(t.acertou?'Acertou':'Errou')+' · '+new Date(t.timestamp).toLocaleString('pt-BR')+'</p></div><a href="/questoes">Praticar →</a></div>').join(''):'<div class="resp-empty-inline">Ainda não há tentativas detalhadas nesta versão. Abra o banco de questões para continuar estudando.</div>';}
 async function renderizarCatalogoMaterias(){const c=document.getElementById('areas-cursos');if(!c)return;try{const d=await(await fetch('/api/categorias')).json(),entries=Object.entries(d||{});c.innerHTML=entries.sort((a,b)=>a[0].localeCompare(b[0],'pt-BR')).map(e=>'<article class="resp-course-item"><span class="resp-course-icon">▤</span><div><h3>'+textoSeguro(e[0])+'</h3><p>'+Number(e[1].count||0).toLocaleString('pt-BR')+' questões no banco</p></div><a href="/questoes?materia='+encodeURIComponent(e[0])+'">Estudar →</a></article>').join('')||'<div class="resp-empty-inline">Nenhuma categoria disponível.</div>';}catch(e){c.innerHTML='<div class="resp-empty-inline">Não foi possível carregar as categorias.</div>';}}
@@ -581,17 +704,58 @@ function alternarFavoritoLeitor(){const i=favoritosUsuario.findIndex(q=>q.tipo==
 
 
 
-const renderizarQuestoesBaseSuite=renderizarQuestoesUI;
-renderizarQuestoesUI=function(questoes,isCaderno=false){
- window.respQuestionCache=window.respQuestionCache||{};(questoes||[]).forEach(q=>window.respQuestionCache[String(q.id)]=q);
- renderizarQuestoesBaseSuite(questoes,isCaderno);
- document.querySelectorAll('#questoes-container > div').forEach(card=>{const m=card.innerHTML.match(/id="alts-([^"]+)"/),id=m?m[1]:'';if(!id)return;const footer=card.querySelector('div.flex.justify-between.items-center.mt-6');if(!footer||footer.querySelector('[data-question-action="favorite"]'))return;
- const hist=document.createElement('button');hist.type='button';hist.className='resp-question-action';hist.dataset.questionAction='history';hist.dataset.questionId=id;hist.textContent='Histórico';footer.insertBefore(hist,footer.lastElementChild);
- const active=favoritosUsuario.some(q=>String(q.id)===String(id));const fav=document.createElement('button');fav.type='button';fav.className='resp-question-action'+(active?' is-favorite':'');fav.dataset.questionAction='favorite';fav.dataset.questionId=id;fav.textContent=active?'★ Favoritada':'☆ Favoritar';footer.insertBefore(fav,footer.lastElementChild);
- });
+const renderizarQuestoesBaseSuite = renderizarQuestoesUI;
+renderizarQuestoesUI = function(questoes, isCaderno = false) {
+    window.respQuestionCache = window.respQuestionCache || {};
+    (questoes || []).forEach(questao => { window.respQuestionCache[String(questao.id)] = questao; });
+    renderizarQuestoesBaseSuite(questoes, isCaderno);
+    document.querySelectorAll('#questoes-container > div').forEach(card => {
+        const match = card.innerHTML.match(/id="alts-([^"]+)"/);
+        const id = match ? match[1] : '';
+        if (!id) return;
+        const footer = card.querySelector('div.flex.justify-between.items-center.mt-6');
+        if (!footer || footer.querySelector('[data-question-action="favorite"]')) return;
+
+        const historico = document.createElement('button');
+        historico.type = 'button';
+        historico.className = 'resp-question-action resp-question-history';
+        historico.dataset.questionAction = 'history';
+        historico.dataset.questionId = id;
+        historico.title = 'Ver histórico da questão ' + id;
+        historico.setAttribute('aria-label', 'Ver histórico da questão ' + id);
+        historico.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l3 2"></path></svg><span>Histórico</span>`;
+        footer.insertBefore(historico, footer.lastElementChild);
+
+        const ativa = favoritosUsuario.some(item => String(item.id) === String(id));
+        const favorito = document.createElement('button');
+        favorito.type = 'button';
+        favorito.className = 'resp-question-favorite' + (ativa ? ' is-favorite' : '');
+        favorito.dataset.questionAction = 'favorite';
+        favorito.dataset.questionId = id;
+        favorito.textContent = ativa ? '★' : '☆';
+        favorito.setAttribute('aria-pressed', String(ativa));
+        favorito.setAttribute('aria-label', ativa ? 'Remover questão ' + id + ' dos favoritos' : 'Favoritar questão ' + id);
+        favorito.title = ativa ? 'Remover dos favoritos' : 'Favoritar questão';
+        footer.insertBefore(favorito, footer.lastElementChild);
+    });
 };
-document.addEventListener('click',e=>{const a=e.target.closest('[data-question-action]');if(a){const id=a.dataset.questionId;if(a.dataset.questionAction==='favorite')alternarFavoritoQuestao(id);if(a.dataset.questionAction==='history')mostrarHistoricoQuestao(id);}if(!e.target.closest('.resp-row-actions'))document.querySelectorAll('.resp-row-menu').forEach(x=>x.classList.add('hidden'));});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){['modal-lista','modal-simulado','modal-pasta','modal-caderno'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));document.body.classList.remove('overflow-hidden');document.querySelectorAll('.resp-row-menu').forEach(x=>x.classList.add('hidden'));}});
+document.addEventListener('click', evento => {
+    const acao = evento.target.closest('[data-question-action]');
+    if (acao) {
+        const id = acao.dataset.questionId;
+        if (acao.dataset.questionAction === 'favorite') alternarFavoritoQuestao(id);
+        if (acao.dataset.questionAction === 'history') mostrarHistoricoQuestao(id);
+    }
+    if (!evento.target.closest('.resp-row-actions')) document.querySelectorAll('.resp-row-menu').forEach(menu => menu.classList.add('hidden'));
+});
+document.addEventListener('keydown', evento => {
+    if (evento.key === 'Escape') {
+        fecharModalHistoricoQuestao();
+        ['modal-lista', 'modal-simulado', 'modal-pasta', 'modal-caderno'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        document.body.classList.remove('overflow-hidden');
+        document.querySelectorAll('.resp-row-menu').forEach(menu => menu.classList.add('hidden'));
+    }
+});
 
 function renderizarAgendaDashboard(){
  const list=document.getElementById('agenda-list');if(!list)return;
