@@ -89,5 +89,30 @@
   linksHost.addEventListener('click', function (event) {
     if (event.target.closest('a')) closeMenu();
   });
+
+  // Na página de questões, compacta a navegação inferior quando o usuário rola para baixo.
+  if (document.body.classList.contains('page-questions')) {
+    let lastQuestionsScrollY = Math.max(0, window.scrollY || window.pageYOffset || 0);
+    function atualizarNavegacaoCompacta() {
+      if (!isMobile()) {
+        document.body.classList.remove('resp-nav-compact');
+        lastQuestionsScrollY = Math.max(0, window.scrollY || window.pageYOffset || 0);
+        return;
+      }
+      const currentY = Math.max(0, window.scrollY || window.pageYOffset || 0);
+      const deltaY = currentY - lastQuestionsScrollY;
+      if (currentY <= 24) {
+        document.body.classList.remove('resp-nav-compact');
+      } else if (deltaY > 3) {
+        document.body.classList.add('resp-nav-compact');
+      } else if (deltaY < -3) {
+        document.body.classList.remove('resp-nav-compact');
+      }
+      lastQuestionsScrollY = currentY;
+    }
+    window.addEventListener('scroll', atualizarNavegacaoCompacta, { passive: true });
+    window.addEventListener('resize', atualizarNavegacaoCompacta);
+    atualizarNavegacaoCompacta();
+  }
 })();
 </script>

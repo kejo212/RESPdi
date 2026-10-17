@@ -918,3 +918,57 @@ body.page-dashboard, body.page-questions, body.page-notebooks, body.page-profile
  .question-list-inline-actions { display:grid; grid-template-columns:1fr 1fr; }
  .question-list-inline-actions button { width:100%; padding:0 10px; }
 }
+
+
+/* Questões no mobile: remove o topo fixo e compacta a navegação inferior durante a rolagem. */
+@media (max-width: 767px) {
+  body.page-questions .resp-topbar {
+    display: none !important;
+  }
+  body.page-questions .question-page-shell {
+    padding: 18px 12px 92px !important;
+  }
+  body.page-questions .resp-sidebar {
+    transition: height .2s ease, padding .2s ease, box-shadow .2s ease;
+  }
+  body.page-questions.resp-nav-compact .resp-sidebar {
+    height: calc(54px + env(safe-area-inset-bottom)) !important;
+    padding: 2px 12px calc(2px + env(safe-area-inset-bottom)) !important;
+    box-shadow: 0 -3px 15px rgba(27,61,68,.06) !important;
+  }
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > a.resp-nav-link[href="/dashboard"],
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"],
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > .resp-mobile-more-trigger {
+    min-height: 48px !important;
+    height: 48px !important;
+    padding: 1px 2px !important;
+    gap: 1px !important;
+    border-radius: 9px !important;
+  }
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > a.resp-nav-link[href="/dashboard"] .resp-nav-icon {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    flex-basis: 22px !important;
+  }
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-icon-mobile {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    flex-basis: 32px !important;
+    box-shadow: 0 3px 8px rgba(36,179,173,.2) !important;
+  }
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-icon-mobile svg {
+    width: 19px !important;
+    height: 19px !important;
+  }
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > a.resp-nav-link[href="/dashboard"] > span:last-child,
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-label-mobile,
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > .resp-mobile-more-trigger > span:last-child {
+    font-size: 8px !important;
+    line-height: 1 !important;
+  }
+  body.page-questions.resp-nav-compact .question-filter-actionbar {
+    bottom: 54px !important;
+  }
+}

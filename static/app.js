@@ -184,7 +184,7 @@ async function aplicarFiltros(pagina = 1) {
         const dados = await res.json();
         renderizarQuestoesUI(dados.questoes, false); renderizarPaginacaoUI(dados.total, parseInt(limit));
         const contador=document.getElementById('questoes-count'); if(contador) contador.textContent=Number(dados.total||0).toLocaleString('pt-BR'); atualizarResumoFiltros();
-        if(document.getElementById('f-mat')) window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Mantém a posição atual da página após carregar o resultado da busca.
     } catch(e) {}
 }
 
@@ -1298,7 +1298,7 @@ async function aplicarFiltros(pagina = 1) {
         const count = document.getElementById('questoes-count');
         if (count) count.textContent = respFormatoNumero(data.total || 0);
         atualizarResumoFiltros();
-        if (document.getElementById('f-mat')) window.scrollTo({top:0,behavior:'smooth'});
+        // Mantém a posição atual da página após carregar o resultado da busca.
     } catch (error) {
         mostrarToast(error.message || 'Erro ao aplicar os filtros.',{titulo:'Banco de questões'});
     }
