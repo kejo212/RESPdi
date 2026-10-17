@@ -1,40 +1,22 @@
+
 <nav class="resp-sidebar" aria-label="Navegação principal">
-    <a href="/dashboard" class="resp-brand" aria-label="RESPdi — início">
-        <img src="/static/favicon.png" alt="RESPdi">
-    </a>
-
-    <div class="resp-nav">
-        <a href="/dashboard" class="resp-nav-link {% if request.path == '/dashboard' %}is-active{% endif %}" title="Início" aria-label="Início">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg>
-            <span>Início</span>
-        </a>
-        <a href="/questoes" class="resp-nav-link {% if request.path == '/questoes' %}is-active{% endif %}" title="Questões" aria-label="Questões">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2Z"/><path d="M14 3.5V8h4M8.5 12h7M8.5 16h7"/></svg>
-            <span>Questões</span>
-        </a>
-        <a href="/cadernos" class="resp-nav-link {% if request.path == '/cadernos' %}is-active{% endif %}" title="Cadernos" aria-label="Cadernos">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8 3.5v17M11.5 8h5M11.5 12h5M11.5 16h3"/></svg>
-            <span>Cadernos</span>
-        </a>
-    </div>
-
-    <div class="resp-sidebar-bottom">
-        <a href="/perfil" class="resp-nav-link profile-link {% if request.path == '/perfil' %}is-active{% endif %}" title="Meu perfil" aria-label="Meu perfil">
-            <span id="sidebar-avatar" class="resp-avatar">U</span>
-        </a>
-    </div>
-</nav>
-
-<header class="resp-topbar">
-    <div class="resp-topbar-heading">
-        <span class="resp-topbar-eyebrow">RESPdi · Área do estudante</span>
-        <strong class="resp-topbar-title">{% if request.path == '/questoes' %}Banco de questões{% elif request.path == '/cadernos' %}Meus cadernos{% elif request.path == '/perfil' %}Meu perfil{% else %}Mesa de estudo{% endif %}</strong>
-    </div>
-    <div class="resp-topbar-right">
-        <span class="resp-topbar-status"><span class="resp-status-dot"></span> Seu espaço de preparação</span>
-        <a href="/perfil" class="resp-user" style="text-decoration:none" aria-label="Abrir perfil">
-            <span id="topbar-username" class="resp-user-name">Estudante</span>
-            <span id="topbar-avatar" class="resp-avatar">E</span>
-        </a>
-    </div>
-</header>
+<a href="/dashboard" class="resp-brand" aria-label="RESPdi — mesa de estudos"><img src="/static/favicon.png" alt="RESPdi"><span class="resp-brand-wordmark">RESP<span>di</span></span></a>
+<div class="resp-nav">
+<a href="/dashboard" class="resp-nav-link {% if request.path == '/dashboard' %}is-active{% endif %}" title="Mesa de estudo"><span class="resp-nav-icon">▦</span><span>Mesa de estudo</span></a>
+<a href="/estudos" class="resp-nav-link {% if request.path == '/estudos' %}is-active{% endif %}" title="Estudos em andamento"><span class="resp-nav-icon">▤</span><span>Estudos em andamento</span></a>
+<a href="/cursos" class="resp-nav-link {% if request.path == '/cursos' %}is-active{% endif %}" title="Todos os cursos"><span class="resp-nav-icon">▱</span><span>Todos os cursos</span></a>
+<a href="/questoes" class="resp-nav-link {% if request.path == '/questoes' %}is-active{% endif %}" title="Sistema de questões"><span class="resp-nav-icon">▣</span><span>Sistema de questões</span></a>
+<a href="/listas" class="resp-nav-link {% if request.path == '/listas' %}is-active{% endif %}" title="Listas e simulados"><span class="resp-nav-icon">☷</span><span>Listas e simulados</span></a>
+<a href="/cadernos" class="resp-nav-link {% if request.path == '/cadernos' %}is-active{% endif %}" title="Meus cadernos"><span class="resp-nav-icon">▤</span><span>Meus cadernos</span></a>
+<a href="/favoritos" class="resp-nav-link {% if request.path == '/favoritos' %}is-active{% endif %}" title="Meus favoritos"><span class="resp-nav-icon">☆</span><span>Favoritos</span></a>
+<a href="/desempenho" class="resp-nav-link {% if request.path == '/desempenho' %}is-active{% endif %}" title="Meu desempenho"><span class="resp-nav-icon">⌁</span><span>Meu desempenho</span></a>
+<a href="/ranking" class="resp-nav-link {% if request.path == '/ranking' %}is-active{% endif %}" title="Ranking"><span class="resp-nav-icon">♜</span><span>Ranking</span></a>
+<a href="/cast" class="resp-nav-link {% if request.path == '/cast' %}is-active{% endif %}" title="RESPdi Cast"><span class="resp-nav-icon">♫</span><span>RESPdi Cast</span></a>
+<a href="/monitorias" class="resp-nav-link {% if request.path == '/monitorias' %}is-active{% endif %}" title="Monitorias"><span class="resp-nav-icon">◎</span><span>Monitorias</span></a>
+<a href="/salavip" class="resp-nav-link {% if request.path == '/salavip' %}is-active{% endif %}" title="Sala VIP"><span class="resp-nav-icon">✦</span><span>Sala VIP</span></a>
+<a href="/catalogo" class="resp-nav-link {% if request.path == '/catalogo' %}is-active{% endif %}" title="Catálogo de produtos"><span class="resp-nav-icon">▧</span><span>Catálogo de produtos</span></a>
+<a href="/ldi" class="resp-nav-link {% if request.path == '/ldi' %}is-active{% endif %}" title="Leitor de estudo"><span class="resp-nav-icon">▤</span><span>Leitor de estudo</span></a>
+<a href="/ajuda" class="resp-nav-link {% if request.path == '/ajuda' %}is-active{% endif %}" title="Ajuda e suporte"><span class="resp-nav-icon">?</span><span>Ajuda e suporte</span></a>
+<a href="/perfil" class="resp-nav-link profile-link {% if request.path == '/perfil' %}is-active{% endif %}" title="Meu perfil"><span id="sidebar-avatar" class="resp-avatar">U</span><span>Meu perfil</span></a>
+</div></nav>
+<header class="resp-topbar"><div class="resp-topbar-heading"><span class="resp-topbar-eyebrow">RESPdi · Área do estudante</span><strong class="resp-topbar-title">{% if request.path == '/questoes' %}Sistema de questões{% elif request.path == '/listas' %}Listas e simulados{% elif request.path == '/cadernos' %}Meus cadernos{% elif request.path == '/perfil' %}Meu perfil{% elif request.path == '/estudos' %}Estudos em andamento{% elif request.path == '/cursos' %}Todos os cursos{% elif request.path == '/desempenho' %}Meu desempenho{% elif request.path == '/ranking' %}Ranking{% elif request.path == '/cast' %}RESPdi Cast{% elif request.path == '/monitorias' %}Monitorias{% elif request.path == '/salavip' %}Sala VIP{% elif request.path == '/catalogo' %}Catálogo de produtos{% elif request.path == '/ldi' %}Leitor de estudo{% elif request.path == '/favoritos' %}Meus favoritos{% elif request.path == '/ajuda' %}Ajuda e suporte{% else %}Mesa de estudo{% endif %}</strong></div><div class="resp-topbar-right"><button type="button" class="resp-topbar-action" onclick="executarAcaoModulo('favoritos')" aria-label="Abrir favoritos">☆</button><button type="button" class="resp-topbar-action" onclick="mostrarNotificacoes()" aria-label="Ver notificações">♧</button><a href="/perfil" class="resp-user" style="text-decoration:none" aria-label="Abrir perfil"><span id="topbar-username" class="resp-user-name">Estudante</span><span id="topbar-avatar" class="resp-avatar">E</span></a></div></header>
