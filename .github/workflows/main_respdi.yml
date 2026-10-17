@@ -4,6 +4,11 @@
 
 name: Build and deploy Python app to Azure Web App - respdi
 
+# Serializa as publicações no mesmo App Service para evitar deploys concorrentes.
+concurrency:
+  group: respdi-azure-production
+  cancel-in-progress: false
+
 on:
   push:
     branches:
