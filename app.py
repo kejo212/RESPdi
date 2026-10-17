@@ -181,20 +181,30 @@ def obter_codigo_cadastro():
     codigo = str(cfg.get('codigo_cadastro') or CODIGO_CADASTRO_PADRAO)
     return codigo if codigo.isdigit() else CODIGO_CADASTRO_PADRAO
 
-@app.route('/api/admin/codigo-cadastro', methods=['GET', 'POST'])
+@app.route('/api/admin/codigo-cadastro', methods=['POST'])
 def gerenciar_codigo_cadastro():
-    if request.method == 'GET':
-        if request.args.get('username') != 'davi': return jsonify({"erro": "Não autorizado"}), 403
-        return jsonify({"codigo": obter_codigo_cadastro()})
-
     dados = request.get_json(silent=True) or {}
-    if dados.get('username') != 'davi': return jsonify({"erro": "Não autorizado"}), 403
+    if dados.get('username') != 'davi':
+        return jsonify({"erro": "Não autorizado"}), 403
+
+    admin = carregar_usuarios().get('davi', {})
+    senha_informada = str(dados.get('senha_admin') or '')
+    senha_correta = str(admin.get('senha') or '')
+    if admin.get('status') != 'aprovado' or not senha_correta or not hmac.compare_digest(senha_informada, senha_correta):
+        return jsonify({"erro": "Confirme a senha do administrador para continuar."}), 403
+
+    acao = dados.get('acao', 'salvar')
+    cfg = fb_get('config')
+    if not isinstance(cfg, dict): cfg = {}
+    if acao == 'consultar':
+        return jsonify({"codigo": obter_codigo_cadastro()})
+    if acao != 'salvar':
+        return jsonify({"erro": "Ação inválida."}), 400
+
     codigo = str(dados.get('codigo') or '').strip()
     if not codigo.isdigit() or len(codigo) > 20:
         return jsonify({"erro": "Informe um código composto somente por números (até 20 dígitos)."}), 400
 
-    cfg = fb_get('config')
-    if not isinstance(cfg, dict): cfg = {}
     cfg['codigo_cadastro'] = codigo
     if not fb_put('config', cfg): return jsonify({"erro": "Não foi possível salvar o código."}), 500
     registrar_log("ADMIN: Código de cadastro atualizado.")

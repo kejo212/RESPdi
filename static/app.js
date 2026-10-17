@@ -97,25 +97,45 @@ async function carregarConfigGlobal() {
 
 async function carregarCodigoCadastro() {
     const input = document.getElementById('codigo-cadastro-admin');
+    const senha = document.getElementById('senha-admin-codigo');
     const status = document.getElementById('status-codigo-cadastro');
-    if (!input) return;
+    const button = document.getElementById('btn-consultar-codigo-cadastro');
+    if (!input || !senha) return;
+    if (!senha.value) {
+        if (status) status.textContent = 'Digite a senha do administrador antes de consultar o código.';
+        senha.focus();
+        return;
+    }
+    if (button) { button.disabled = true; button.textContent = 'Consultando…'; }
     try {
-        const res = await fetch('/api/admin/codigo-cadastro?username=' + encodeURIComponent(currentUser), {cache:'no-store'});
+        const res = await fetch('/api/admin/codigo-cadastro', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: currentUser, senha_admin: senha.value, acao: 'consultar'})
+        });
         const data = await res.json();
         if (!res.ok) throw new Error(data.erro || 'Não foi possível carregar o código atual.');
         input.value = String(data.codigo || '');
-        if (status) status.textContent = 'Código atual carregado. Você pode substituí-lo acima.';
+        if (status) status.textContent = 'Código atual carregado. Você pode alterá-lo abaixo.';
     } catch (error) {
         if (status) status.textContent = error.message || 'Erro ao carregar o código.';
+    } finally {
+        if (button) { button.disabled = false; button.textContent = 'Consultar código'; }
     }
 }
 
 async function salvarCodigoCadastro() {
     const input = document.getElementById('codigo-cadastro-admin');
+    const senha = document.getElementById('senha-admin-codigo');
     const status = document.getElementById('status-codigo-cadastro');
     const button = document.getElementById('btn-salvar-codigo-cadastro');
-    if (!input) return;
+    if (!input || !senha) return;
     const codigo = input.value.trim();
+    if (!senha.value) {
+        if (status) status.textContent = 'Digite a senha do administrador para salvar o código.';
+        senha.focus();
+        return;
+    }
     if (!/^\d{1,20}$/.test(codigo)) {
         if (status) status.textContent = 'Digite somente números (de 1 a 20 dígitos).';
         input.focus();
@@ -126,7 +146,7 @@ async function salvarCodigoCadastro() {
         const res = await fetch('/api/admin/codigo-cadastro', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username: currentUser, codigo: codigo})
+            body: JSON.stringify({username: currentUser, senha_admin: senha.value, acao: 'salvar', codigo: codigo})
         });
         const data = await res.json();
         if (!res.ok || !data.sucesso) throw new Error(data.erro || 'Não foi possível salvar o código.');
@@ -519,7 +539,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (currentUser === 'davi' && document.getElementById('admin-panel')) { 
         document.getElementById('admin-panel').classList.remove('hidden'); 
         carregarConfigGlobal();
-        carregarCodigoCadastro();
         carregarPainelAdmin(); 
         carregarLogsServidor(); 
         setInterval(carregarLogsServidor, 3000); 
