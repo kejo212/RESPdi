@@ -10,12 +10,8 @@ MODULE_PAGES = {
  "cursos":{"key":"cursos","title":"Todos os cursos","eyebrow":"Conteúdo de estudo","description":"Explore as áreas disponíveis no banco de questões. Cursos completos ainda não foram cadastrados.","cards":[]},
  "desempenho":{"key":"desempenho","title":"Meu desempenho","eyebrow":"Acompanhamento","description":"Acompanhe os registros reais de resolução desta conta.","cards":[]},
  "ranking":{"key":"ranking","title":"Ranking","eyebrow":"Comparação de resultados","description":"A estrutura visual está preparada. Uma classificação coletiva depende de regras e dados comparáveis.","cards":[{"icon":"♜","title":"Posição no ranking","description":"Ainda não há classificação coletiva calculada para exibir.","action":"none","status":"Em preparação"},{"icon":"↗","title":"Seu progresso","description":"Consulte seus resultados enquanto o ranking é preparado.","action":"desempenho","status":"Disponível"}]},
- "cast":{"key":"cast","title":"RESPdi Cast","eyebrow":"Aprendizagem em áudio","description":"Área preparada para conteúdos em áudio. Os arquivos ainda não fazem parte do repositório atual.","cards":[{"icon":"♫","title":"Conteúdos em áudio","description":"Episódios cadastrados aparecerão aqui quando houver conteúdo integrado.","action":"none","status":"Aguardando conteúdo"}]},
- "monitorias":{"key":"monitorias","title":"Monitorias","eyebrow":"Acompanhamento","description":"Espaço preparado para horários, orientações e materiais de monitoria.","cards":[{"icon":"◷","title":"Agenda de monitorias","description":"Não há agenda de monitorias cadastrada no sistema atual.","action":"none","status":"Aguardando conteúdo"}]},
- "salavip":{"key":"salavip","title":"Sala VIP","eyebrow":"Comunidade","description":"Área preparada para recursos especiais, sem simular conteúdos não integrados.","cards":[{"icon":"✦","title":"Área VIP","description":"Recursos específicos serão conectados quando houver conteúdo e regras de acesso definidos.","action":"none","status":"Em preparação"}]},
  "catalogo":{"key":"catalogo","title":"Catálogo de produtos","eyebrow":"Explore","description":"Área preparada para cursos e produtos. Não há catálogo comercial cadastrado no banco atual.","cards":[{"icon":"▦","title":"Catálogo","description":"Nenhum produto foi cadastrado no sistema atual.","action":"none","status":"Aguardando conteúdo"}]},
  "favoritos":{"key":"favoritos","title":"Meus favoritos","eyebrow":"Revisão rápida","description":"As questões favoritas ficarão disponíveis aqui para consulta posterior.","cards":[]},
- "ldi":{"key":"ldi","title":"Leitor de estudo","eyebrow":"Material didático","description":"Leitor com anotações pessoais e controles de apresentação. Materiais completos ainda não foram cadastrados.","cards":[]},
  "ajuda":{"key":"ajuda","title":"Ajuda e suporte","eyebrow":"Estamos aqui","description":"Reporte problemas nas próprias questões ou retorne às áreas funcionais do RESPdi.","cards":[{"icon":"⚑","title":"Reportar problema em questão","description":"Use o botão de reporte junto a uma questão para enviar o problema ao painel administrativo.","action":"questoes","status":"Disponível"},{"icon":"⌂","title":"Voltar ao início","description":"Retorne à mesa de estudos.","action":"dashboard","status":"Disponível"}]}
 }
 
@@ -93,6 +89,9 @@ def route_perfil(): return render_template('perfil.html')
 
 @app.route('/listas')
 def route_listas(): return render_template('listas.html')
+
+@app.route('/materiais')
+def route_materiais(): return render_template('materiais.html')
 
 def _registrar_rota_modulo(slug):
     def _view(slug=slug):

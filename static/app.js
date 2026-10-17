@@ -572,3 +572,33 @@ async function adicionarTarefaAgenda(event){
 }
 function alternarTarefaAgenda(id,checked){const task=agendaUsuario.find(t=>String(t.id)===String(id));if(!task)return;task.concluida=Boolean(checked);syncDB('agenda',agendaUsuario);renderizarAgendaDashboard();}
 function removerTarefaAgenda(id){agendaUsuario=agendaUsuario.filter(t=>String(t.id)!==String(id));syncDB('agenda',agendaUsuario);renderizarAgendaDashboard();mostrarToast('Tarefa removida.');}
+
+
+// Biblioteca Google Drive: a busca abre a interface oficial com o filtro aplicado à pasta compartilhada.
+const RESP_ACERVO_DRIVE_ID = "13tBBSrXMsu2NGW0jCSvrzIE9epV-Bw47";
+const RESP_ACERVO_DRIVE_URL = "https://drive.google.com/drive/folders/" + RESP_ACERVO_DRIVE_ID;
+function abrirAcervoDrive() {
+    window.open(RESP_ACERVO_DRIVE_URL, "_blank", "noopener,noreferrer");
+}
+function pesquisarAcervoDrive(termoRapido) {
+    const campo = document.getElementById("drive-search-term");
+    const termo = String(typeof termoRapido === "string" ? termoRapido : (campo ? campo.value : "")).trim();
+    if (!termo) {
+        if (campo) campo.focus();
+        mostrarToast("Digite um tema, nome de arquivo ou palavra-chave para pesquisar.");
+        return;
+    }
+    if (campo) campo.value = termo;
+    const consulta = "in:" + RESP_ACERVO_DRIVE_ID + " " + termo;
+    const url = "https://drive.google.com/drive/u/0/search?q=" + encodeURIComponent(consulta);
+    window.open(url, "_blank", "noopener,noreferrer");
+    mostrarToast("Pesquisa aberta no Google Drive em uma nova aba.");
+}
+async function copiarLinkAcervoDrive() {
+    try {
+        await navigator.clipboard.writeText(RESP_ACERVO_DRIVE_URL);
+        mostrarToast("Link da biblioteca copiado.");
+    } catch (e) {
+        window.prompt("Copie o link da biblioteca do Google Drive:", RESP_ACERVO_DRIVE_URL);
+    }
+}
