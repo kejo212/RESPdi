@@ -1135,3 +1135,23 @@ body.page-dashboard, body.page-questions, body.page-notebooks, body.page-profile
     margin-top: 10px !important;
   }
 }
+
+
+/* Desktop UX: conteúdo amplo e sidebar sobreposta durante a expansão. */
+@media (min-width: 768px) {
+  .resp-topbar { left:0 !important; width:100% !important; box-sizing:border-box !important; }
+  .page-dashboard > .px-4,.page-questions > .px-4,.page-notebooks > .px-4,.page-profile > .px-4 {
+    box-sizing:border-box !important; width:auto !important; max-width:none !important;
+    margin-left:100px !important; margin-right:24px !important;
+  }
+  .resp-page { box-sizing:border-box !important; width:auto !important; max-width:none !important; margin-left:100px !important; margin-right:24px !important; }
+  .resp-sidebar { z-index:320 !important; }
+  .question-builder-toolbar { min-width:0 !important; }
+  .question-search-box { box-sizing:border-box !important; min-width:0 !important; max-width:100% !important; overflow:hidden !important; background:#fbfdfd !important; }
+  .question-search-box input {
+    box-sizing:border-box !important; width:0 !important; min-width:0 !important; flex:1 1 0% !important;
+    height:100% !important; margin:0 !important; padding:0 !important; border:0 !important;
+    border-radius:0 !important; outline:none !important; box-shadow:none !important;
+    background:transparent !important; color:#344c53 !important;
+  }
+}

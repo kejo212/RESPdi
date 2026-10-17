@@ -414,7 +414,7 @@ async function salvarCaderno() {
         let sorteio = dados.questoes.sort(() => 0.5 - Math.random()).slice(0, qtd);
         cadernosUsuario.push({ id: Date.now().toString(), nome: nome, data: new Date().toLocaleDateString('pt-BR'), questoes: sorteio });
         syncDB('cadernos', cadernosUsuario);
-        fecharModalCaderno(); alert(`Sucesso! Caderno "${nome}" criado com ${sorteio.length} questões.`);
+        fecharModalCaderno(); mostrarToast(`Caderno "${nome}" criado com ${sorteio.length} questões.`);
     } catch(e) { alert("Erro ao criar caderno."); document.getElementById('btn-salvar-caderno').innerText = "Criar Caderno"; }
 }
 
@@ -736,7 +736,7 @@ async function salvarListaAtual(){
  const btn=document.getElementById('btn-criar-lista');if(btn){btn.disabled=true;btn.textContent='Criando…';}
  try{const data=await carregarQuestoesComFiltros(1000);if(!data.questoes?.length){mostrarToast('Nenhuma questão corresponde aos filtros atuais.');return;}
  const folder=localStorage.getItem('respPastaDestino')||null;listasUsuario.push({id:Date.now().toString(),tipo:'lista',nome,data:new Date().toLocaleDateString('pt-BR'),criadaEm:Date.now(),questoes:data.questoes,filtro:montarPayloadFiltroCompleto(1000),pasta_id:folder});
- await syncDB('listas',listasUsuario);localStorage.removeItem('respPendingCollection');localStorage.removeItem('respPastaDestino');fecharModalLista();mostrarToast('Lista criada com '+data.questoes.length+' questões.');if(location.pathname==='/listas')renderizarGerenciadorListas();else if(confirm('Lista salva. Abrir Listas e Simulados?'))location.href='/listas';
+ await syncDB('listas',listasUsuario);localStorage.removeItem('respPendingCollection');localStorage.removeItem('respPastaDestino');fecharModalLista();mostrarToast('Lista criada com '+data.questoes.length+' questões.');if(location.pathname==='/listas')renderizarGerenciadorListas();
  }catch(e){mostrarToast(e.message||'Erro ao criar a lista.');}finally{if(btn){btn.disabled=false;btn.textContent='Salvar lista';}}
 }
 function abrirModalSimulado(){const el=document.getElementById('modal-simulado');if(el){el.classList.remove('hidden');document.body.classList.add('overflow-hidden');document.getElementById('nome-simulado')?.focus();}}
@@ -747,7 +747,7 @@ async function salvarSimuladoAtual(){
  const btn=document.getElementById('btn-criar-simulado');if(btn){btn.disabled=true;btn.textContent='Criando…';}
  try{const data=await carregarQuestoesComFiltros(Math.min(q,1000));if(!data.questoes?.length){mostrarToast('Nenhuma questão corresponde aos filtros atuais.');return;}
  const folder=localStorage.getItem('respPastaDestino')||null;simuladosUsuario.push({id:Date.now().toString(),tipo:'simulado',nome,data:new Date().toLocaleDateString('pt-BR'),criadaEm:Date.now(),duracaoMinutos:duration,questoes:data.questoes.slice(0,q),filtro:montarPayloadFiltroCompleto(Math.min(q,1000)),pasta_id:folder});
- await syncDB('simulados',simuladosUsuario);localStorage.removeItem('respPendingCollection');localStorage.removeItem('respPastaDestino');fecharModalSimulado();mostrarToast('Simulado criado com '+Math.min(q,data.questoes.length)+' questões.');if(location.pathname==='/listas')renderizarGerenciadorListas();else if(confirm('Simulado salvo. Abrir Listas e Simulados?'))location.href='/listas';
+ await syncDB('simulados',simuladosUsuario);localStorage.removeItem('respPendingCollection');localStorage.removeItem('respPastaDestino');fecharModalSimulado();mostrarToast('Simulado criado com '+Math.min(q,data.questoes.length)+' questões.');if(location.pathname==='/listas')renderizarGerenciadorListas();
  }catch(e){mostrarToast(e.message||'Erro ao criar o simulado.');}finally{if(btn){btn.disabled=false;btn.textContent='Criar simulado';}}
 }
 function abrirCriacaoPorFiltro(tipo){localStorage.setItem('respPendingCollection',tipo);localStorage.setItem('respPastaDestino',new URLSearchParams(location.search).get('pasta')||'');window.location.href='/questoes?acao='+encodeURIComponent(tipo);}
