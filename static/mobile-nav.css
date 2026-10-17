@@ -150,7 +150,4 @@
   .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-icon-desktop {
     display: inline-flex !important;
   }
-  .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-label-desktop {
-    display: block !important;
-  }
 }
