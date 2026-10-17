@@ -448,3 +448,32 @@ body.page-dashboard, body.page-questions, body.page-notebooks, body.page-profile
   .resp-drive-frame-shell { padding: 6px; }
   .resp-drive-frame { min-height: 400px; height: 56vh; }
 }
+
+
+/* Ícones da navegação: separar o contêiner do SVG dos rótulos ocultos na barra recolhida. */
+.resp-sidebar .resp-nav-link .resp-nav-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  flex: 0 0 22px !important;
+  width: 22px !important;
+  height: 22px !important;
+  color: inherit;
+  line-height: 1;
+}
+.resp-sidebar .resp-nav-link .resp-nav-icon svg {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 21px !important;
+  height: 21px !important;
+  min-width: 21px;
+  flex: 0 0 21px;
+  stroke: currentColor;
+}
+@media (max-width: 767px) {
+  .resp-sidebar .resp-nav-link .resp-nav-icon { flex-basis: 20px !important; width: 20px !important; height: 20px !important; }
+  .resp-sidebar .resp-nav-link .resp-nav-icon svg { width: 20px !important; height: 20px !important; min-width: 20px; flex-basis: 20px; }
+}
