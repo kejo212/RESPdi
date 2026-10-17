@@ -429,14 +429,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 
-let listasUsuario = [];
-let simuladosUsuario = [];
-let favoritosUsuario = [];
-let tentativasUsuario = [];
-let anotacoesUsuario = [];
-let leitorConcluidoUsuario = false;
-let fonteLeitorUsuario = 16;
-let temporizadorSimulado = null;
 function textoSeguro(v){return String(v==null?'':v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function valorSelecionado(id){const el=document.getElementById(id);return el?String(el.value||'').trim():'';}
 function valoresSelecionados(id){const el=document.getElementById(id);return el?Array.from(el.selectedOptions).map(o=>o.value).filter(Boolean):[];}
