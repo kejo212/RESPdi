@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_from_directory, redirect
 import json, glob, os, random, requests
 from datetime import datetime
 
@@ -10,7 +10,6 @@ MODULE_PAGES = {
  "cursos":{"key":"cursos","title":"Todos os cursos","eyebrow":"Conteúdo de estudo","description":"Explore as áreas disponíveis no banco de questões. Cursos completos ainda não foram cadastrados.","cards":[]},
  "desempenho":{"key":"desempenho","title":"Meu desempenho","eyebrow":"Acompanhamento","description":"Acompanhe os registros reais de resolução desta conta.","cards":[]},
  "ranking":{"key":"ranking","title":"Ranking","eyebrow":"Comparação de resultados","description":"A estrutura visual está preparada. Uma classificação coletiva depende de regras e dados comparáveis.","cards":[{"icon":"♜","title":"Posição no ranking","description":"Ainda não há classificação coletiva calculada para exibir.","action":"none","status":"Em preparação"},{"icon":"↗","title":"Seu progresso","description":"Consulte seus resultados enquanto o ranking é preparado.","action":"desempenho","status":"Disponível"}]},
- "catalogo":{"key":"catalogo","title":"Catálogo de produtos","eyebrow":"Explore","description":"Área preparada para cursos e produtos. Não há catálogo comercial cadastrado no banco atual.","cards":[{"icon":"▦","title":"Catálogo","description":"Nenhum produto foi cadastrado no sistema atual.","action":"none","status":"Aguardando conteúdo"}]},
  "favoritos":{"key":"favoritos","title":"Meus favoritos","eyebrow":"Revisão rápida","description":"As questões favoritas ficarão disponíveis aqui para consulta posterior.","cards":[]},
  "ajuda":{"key":"ajuda","title":"Ajuda e suporte","eyebrow":"Estamos aqui","description":"Reporte problemas nas próprias questões ou retorne às áreas funcionais do RESPdi.","cards":[{"icon":"⚑","title":"Reportar problema em questão","description":"Use o botão de reporte junto a uma questão para enviar o problema ao painel administrativo.","action":"questoes","status":"Disponível"},{"icon":"⌂","title":"Voltar ao início","description":"Retorne à mesa de estudos.","action":"dashboard","status":"Disponível"}]}
 }
@@ -92,6 +91,9 @@ def route_listas(): return render_template('listas.html')
 
 @app.route('/materiais')
 def route_materiais(): return render_template('materiais.html')
+
+@app.route('/catalogo')
+def route_catalogo_removido(): return redirect('/dashboard')
 
 def _registrar_rota_modulo(slug):
     def _view(slug=slug):
