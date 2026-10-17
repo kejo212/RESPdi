@@ -53,7 +53,20 @@
             </div>
         </div>
 
-        <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 w-full dashboard-materials">
+        <style>
+.resp-agenda-panel{margin:4px 0 26px}.resp-agenda-form{display:grid;grid-template-columns:minmax(0,1fr) 180px auto;gap:12px;align-items:end;margin-bottom:10px}.resp-agenda-form input{min-height:42px;border:1px solid #e0e9eb;border-radius:10px;padding:10px 12px;background:#fbfdfd;color:#3b5158;font-size:12px}.resp-activity-item .is-complete strong{text-decoration:line-through;color:#94a2a7}.resp-activity-item input[type=checkbox]{accent-color:var(--resp-teal)}
+@media(max-width:767px){.resp-agenda-form{grid-template-columns:minmax(0,1fr)}.resp-agenda-form button{width:100%}}
+</style>
+<div class="resp-panel resp-agenda-panel">
+  <div class="resp-section-heading"><div><h2>Planejamento de estudos</h2><p>Organize tarefas pessoais de revisão; elas ficam salvas na sua conta.</p></div><span class="resp-eyebrow" id="agenda-data-atual"></span></div>
+  <form id="agenda-form" class="resp-agenda-form" onsubmit="adicionarTarefaAgenda(event)">
+    <label class="question-filter-field"><span class="question-filter-label">Tarefa</span><input id="agenda-tarefa" maxlength="140" placeholder="Ex.: Revisar anemia megaloblástica" required></label>
+    <label class="question-filter-field"><span class="question-filter-label">Data</span><input id="agenda-data" type="date" required></label>
+    <button type="submit" class="question-action-primary">Adicionar tarefa +</button>
+  </form>
+  <div id="agenda-list" class="resp-activity-list"></div>
+</div>
+<div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 w-full dashboard-materials">
             <h2 class="text-xl md:text-2xl font-black text-gray-800 mb-2 flex items-center gap-2">
                 <svg class="w-5 h-5 md:w-6 md:h-6 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 3.8l6.4 12.7H5.6L12 5.8z"/></svg> 
                 Materiais de Estudo

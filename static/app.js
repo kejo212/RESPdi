@@ -14,6 +14,7 @@ let simuladosUsuario = [];
 let favoritosUsuario = [];
 let tentativasUsuario = [];
 let anotacoesUsuario = [];
+let agendaUsuario = [];
 let leitorConcluidoUsuario = false;
 let fonteLeitorUsuario = 16;
 let temporizadorSimulado = null;
@@ -404,7 +405,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (currentUser !== 'visitante') {
         try {
             const res = await fetch(`/api/sync/${currentUser}`); const data = await res.json();
-            progressoUsuario = data.progresso || {}; cadernosUsuario = data.cadernos || []; historicoUsuario = data.historico || []; listasUsuario = data.listas || []; simuladosUsuario = data.simulados || []; favoritosUsuario = data.favoritos || []; tentativasUsuario = data.tentativas || []; anotacoesUsuario = data.anotacoes || []; leitorConcluidoUsuario = data.leitorConcluido || false;
+            progressoUsuario = data.progresso || {}; cadernosUsuario = data.cadernos || []; historicoUsuario = data.historico || []; listasUsuario = data.listas || []; simuladosUsuario = data.simulados || []; favoritosUsuario = data.favoritos || []; tentativasUsuario = data.tentativas || []; anotacoesUsuario = data.anotacoes || []; agendaUsuario = data.agenda || []; leitorConcluidoUsuario = data.leitorConcluido || false;
         } catch(e) {}
     }
     atualizarNumerosEstatisticas();
@@ -423,7 +424,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if(document.getElementById('f-mat')) { carregarFiltros().then(async () => { await carregarOpcoesMetadados(); bindQuestionFilterInterface(); const p=new URLSearchParams(location.search); const mat=p.get('materia'); if(mat){const el=document.getElementById('f-mat');Array.from(el.options).forEach(o=>{o.selected=o.value===mat;});el.dispatchEvent(new Event('change'));} await aplicarFiltros(1); const pending=p.get('acao')||localStorage.getItem('respPendingCollection'); if(pending==='lista')setTimeout(abrirModalLista,150); if(pending==='simulado')setTimeout(abrirModalSimulado,150); }); }
     if(document.getElementById('lista-cadernos')) { renderizarListaCadernos(); }
     if(document.getElementById('listas-table-body')) { renderizarGerenciadorListas(); document.getElementById('busca-listas')?.addEventListener('input',renderizarGerenciadorListas); document.getElementById('tipo-listas')?.addEventListener('change',renderizarGerenciadorListas); document.getElementById('ordenar-listas')?.addEventListener('click',e=>{const b=e.currentTarget;b.dataset.order=b.dataset.order==='desc'?'asc':'desc';b.textContent=b.dataset.order==='desc'?'Criação ↓':'Criação ↑';renderizarGerenciadorListas();}); }
-    renderizarResumoDesempenho(); renderizarEstudosEmAndamento(); renderizarCatalogoMaterias(); renderizarListaFavoritos();
+    renderizarResumoDesempenho(); renderizarEstudosEmAndamento(); renderizarCatalogoMaterias(); renderizarListaFavoritos(); renderizarAgendaDashboard();
     const reader=document.getElementById('ldi-anotacao'); if(reader){const note=anotacoesUsuario.find(n=>n.chave==='leitor-geral');if(note)reader.value=note.texto||'';fonteLeitorUsuario=parseInt(localStorage.getItem('respReaderFont')||'16',10);ajustarFonteLeitor(0);const status=document.getElementById('ldi-status'),btn=document.getElementById('btn-concluir-leitura');if(status)status.textContent=leitorConcluidoUsuario?'Leitura marcada como concluída':'Leitura não concluída';if(btn)btn.textContent=leitorConcluidoUsuario?'✓ Concluído':'○ Concluir';}
 });
 
@@ -563,3 +564,19 @@ renderizarQuestoesUI=function(questoes,isCaderno=false){
 };
 document.addEventListener('click',e=>{const a=e.target.closest('[data-question-action]');if(a){const id=a.dataset.questionId;if(a.dataset.questionAction==='favorite')alternarFavoritoQuestao(id);if(a.dataset.questionAction==='history')mostrarHistoricoQuestao(id);}if(!e.target.closest('.resp-row-actions'))document.querySelectorAll('.resp-row-menu').forEach(x=>x.classList.add('hidden'));});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){['modal-lista','modal-simulado','modal-pasta','modal-caderno'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));document.body.classList.remove('overflow-hidden');document.querySelectorAll('.resp-row-menu').forEach(x=>x.classList.add('hidden'));}});
+
+function renderizarAgendaDashboard(){
+ const list=document.getElementById('agenda-list');if(!list)return;
+ const today=new Date(),iso=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+ const date=document.getElementById('agenda-data');if(date&&!date.value)date.value=iso;
+ const label=document.getElementById('agenda-data-atual');if(label)label.textContent=today.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
+ if(!agendaUsuario.length){list.innerHTML='<div class="resp-empty-inline">Nenhuma tarefa adicionada. Use o formulário acima para organizar sua revisão.</div>';return;}
+ list.innerHTML=agendaUsuario.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(task=>'<div class="resp-activity-item"><input type="checkbox" '+(task.concluida?'checked':'')+' onchange="alternarTarefaAgenda(\''+textoSeguro(task.id)+'\',this.checked)" aria-label="Marcar tarefa como concluída"><div class="'+(task.concluida?'is-complete':'')+'"><strong>'+textoSeguro(task.titulo)+'</strong><p>'+textoSeguro(task.data||'Sem data')+'</p></div><button type="button" class="resp-icon-button" onclick="removerTarefaAgenda(\''+textoSeguro(task.id)+'\')" aria-label="Remover tarefa">×</button></div>').join('');
+}
+async function adicionarTarefaAgenda(event){
+ event.preventDefault();const titulo=valorSelecionado('agenda-tarefa'),data=valorSelecionado('agenda-data');if(!titulo||!data)return;
+ agendaUsuario.push({id:Date.now().toString(),titulo:titulo,data:data,concluida:false,criadaEm:Date.now()});await syncDB('agenda',agendaUsuario);
+ const input=document.getElementById('agenda-tarefa');if(input)input.value='';renderizarAgendaDashboard();mostrarToast('Tarefa adicionada ao planejamento.');
+}
+function alternarTarefaAgenda(id,checked){const task=agendaUsuario.find(t=>String(t.id)===String(id));if(!task)return;task.concluida=Boolean(checked);syncDB('agenda',agendaUsuario);renderizarAgendaDashboard();}
+function removerTarefaAgenda(id){agendaUsuario=agendaUsuario.filter(t=>String(t.id)!==String(id));syncDB('agenda',agendaUsuario);renderizarAgendaDashboard();mostrarToast('Tarefa removida.');}
