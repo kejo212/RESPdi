@@ -822,3 +822,73 @@ body.page-dashboard, body.page-questions, body.page-notebooks, body.page-profile
   border-bottom: 1px solid #e6eeee !important;
   border-radius: 0 !important;
 }
+
+
+/* Expansão da navegação: painel sobreposto, com altura e posição estáveis para cada item. */
+@media (min-width: 768px) {
+  .resp-sidebar {
+    box-sizing: border-box;
+    align-items: stretch;
+    gap: 18px;
+    transition: width .22s ease, box-shadow .22s ease;
+  }
+  .resp-brand {
+    box-sizing: border-box;
+    height: 52px;
+    min-height: 52px;
+    flex: 0 0 52px;
+    margin: 0;
+  }
+  .resp-nav {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 8px !important;
+    align-items: stretch;
+    padding: 0 !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .resp-nav-link,
+  .resp-sidebar:hover .resp-nav-link,
+  .resp-sidebar:focus-within .resp-nav-link {
+    box-sizing: border-box;
+    height: 46px !important;
+    min-height: 46px !important;
+    flex: 0 0 46px !important;
+    margin-top: 0;
+    transform: none !important;
+    transition: color .18s ease, background .18s ease;
+  }
+  .resp-nav-link {
+    align-self: center;
+    padding: 0 !important;
+  }
+  .resp-sidebar:hover .resp-nav-link,
+  .resp-sidebar:focus-within .resp-nav-link {
+    align-self: stretch;
+    width: 100%;
+    min-width: 0;
+    padding: 0 11px !important;
+    gap: 11px;
+  }
+  .resp-nav-link.profile-link,
+  .resp-sidebar:hover .resp-nav-link.profile-link,
+  .resp-sidebar:focus-within .resp-nav-link.profile-link {
+    height: 46px !important;
+    min-height: 46px !important;
+    flex: 0 0 46px !important;
+    margin-top: auto;
+  }
+  .resp-sidebar:hover .resp-nav,
+  .resp-sidebar:focus-within .resp-nav {
+    align-items: stretch;
+    gap: 8px !important;
+    padding: 0 !important;
+  }
+  .resp-nav-link:hover,
+  .resp-sidebar:hover .resp-nav-link:hover,
+  .resp-sidebar:focus-within .resp-nav-link:hover {
+    transform: none !important;
+  }
+}

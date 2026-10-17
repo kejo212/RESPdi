@@ -933,7 +933,7 @@ function renderizarArvoreTemas() {
         const materiaExpandida = respExpandedMaterias.has(materia) || (Boolean(termo) && !materia.toLocaleLowerCase('pt-BR').includes(termo)) || assuntos.some(([assunto])=>assuntosSel.has(assunto));
         totalVisiveis++;
         html += '<div class="question-tree-item">';
-        html += '<div class="question-tree-row question-tree-level-0"><label class="question-option-label"><input type="checkbox" data-theme-kind="materia" data-filter-value="' + textoSeguro(materia) + '"' + (materiasSel.has(materia)?' checked':'') + '><span class="question-option-name">' + textoSeguro(materia) + '</span></label><span class="question-option-count">' + respFormatoNumero(registro.count) + '</span>';
+        html += '<div class="question-tree-row question-tree-level-0" data-theme-row-materia="' + textoSeguro(materia) + '"><label class="question-option-label"><input type="checkbox" data-theme-kind="materia" data-filter-value="' + textoSeguro(materia) + '"' + (materiasSel.has(materia)?' checked':'') + '><span class="question-option-name">' + textoSeguro(materia) + '</span></label><span class="question-option-count">' + respFormatoNumero(registro.count) + '</span>';
         if (assuntos.length) html += '<button type="button" class="question-tree-expand" data-expand-materia="' + textoSeguro(materia) + '" aria-expanded="' + String(materiaExpandida) + '" aria-label="' + (materiaExpandida?'Recolher ':'Expandir ') + textoSeguro(materia) + '">' + (materiaExpandida?'−':'+') + '</button>';
         html += '</div>';
 
@@ -946,7 +946,7 @@ function renderizarArvoreTemas() {
                 const key = materia + '::' + assunto;
                 const assuntoExpandido = respExpandedAssuntos.has(key) || (Boolean(termo) && !assunto.toLocaleLowerCase('pt-BR').includes(termo) && subs.some(sub=>sub.toLocaleLowerCase('pt-BR').includes(termo))) || subs.some(sub=>subsSel.has(sub));
                 totalVisiveis++;
-                html += '<div class="question-tree-row question-tree-level-1"><label class="question-option-label"><input type="checkbox" data-theme-kind="assunto" data-filter-value="' + textoSeguro(assunto) + '"' + (assuntosSel.has(assunto)?' checked':'') + '><span class="question-option-name">' + textoSeguro(assunto) + '</span></label><span class="question-option-count">' + respFormatoNumero((info||{}).count) + '</span>';
+                html += '<div class="question-tree-row question-tree-level-1" data-theme-row-materia="' + textoSeguro(materia) + '" data-theme-row-assunto="' + textoSeguro(assunto) + '"><label class="question-option-label"><input type="checkbox" data-theme-kind="assunto" data-filter-value="' + textoSeguro(assunto) + '"' + (assuntosSel.has(assunto)?' checked':'') + '><span class="question-option-name">' + textoSeguro(assunto) + '</span></label><span class="question-option-count">' + respFormatoNumero((info||{}).count) + '</span>';
                 if (subs.length) html += '<button type="button" class="question-tree-expand" data-expand-assunto="' + textoSeguro(materia) + '" data-assunto="' + textoSeguro(assunto) + '" aria-expanded="' + String(assuntoExpandido) + '" aria-label="' + (assuntoExpandido?'Recolher ':'Expandir ') + textoSeguro(assunto) + '">' + (assuntoExpandido?'−':'+') + '</button>';
                 html += '</div>';
                 if (assuntoExpandido) {
@@ -1042,12 +1042,24 @@ function bindQuestionFilterInterface() {
         left.addEventListener('change',event => {
             const input = event.target;
             if (input.matches('[data-theme-kind]')) {
+                const kind = input.dataset.themeKind;
                 const map = {materia:'f-mat',assunto:'f-ass',subassunto:'f-sub'};
-                const select = document.getElementById(map[input.dataset.themeKind]);
+                const select = document.getElementById(map[kind]);
                 if (select) {
                     const option = Array.from(select.options).find(item=>item.value===input.dataset.filterValue);
                     if (option) option.selected = input.checked;
                 }
+
+                // Ao interagir com uma especialidade/assunto, abrir suas subopções imediatamente.
+                const row = input.closest('[data-theme-row-materia]');
+                const materia = row ? row.dataset.themeRowMateria : '';
+                if (kind === 'materia') {
+                    respExpandedMaterias.add(input.dataset.filterValue);
+                } else if (kind === 'assunto' && materia) {
+                    respExpandedMaterias.add(materia);
+                    respExpandedAssuntos.add(materia + '::' + input.dataset.filterValue);
+                }
+
                 respAtualizarInterfaceFiltros();
                 respAgendarContagemFiltros();
                 return;
