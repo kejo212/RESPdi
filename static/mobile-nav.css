@@ -139,3 +139,18 @@
 }
 @keyframes resp-mobile-menu-fade { from {opacity:0} to {opacity:1} }
 @keyframes resp-mobile-menu-rise { from {opacity:0;transform:translateY(10px)} to {opacity:1;transform:translateY(0)} }
+
+
+/* Garante que os ícones e rótulos exclusivos do mobile nunca apareçam no desktop. */
+@media (min-width: 768px) {
+  .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-icon-mobile,
+  .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-label-mobile {
+    display: none !important;
+  }
+  .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-icon-desktop {
+    display: inline-flex !important;
+  }
+  .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-label-desktop {
+    display: block !important;
+  }
+}
