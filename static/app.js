@@ -553,7 +553,7 @@ function montarPayloadFiltroCompleto(limite){
  return{pagina:1,limite:limite||1000,materia:getSelectedValues('f-mat'),assunto:getSelectedValues('f-ass'),subassunto:getSelectedValues('f-sub'),palavraChave:valorSelecionado('f-busca'),statusProgresso:st&&st.value?st.value:'todas',feitas_ids:feitas,erradas_ids:erradas,metadados:coletarMetadadosSelecionados(),filtrosAvancados:coletarFiltrosAvancados()};
 }
 async function carregarQuestoesComFiltros(limit){const r=await fetch('/api/questoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(montarPayloadFiltroCompleto(limit))});const d=await r.json();if(!r.ok||d.erro_interno)throw new Error(d.erro_interno||'Não foi possível carregar questões.');return d;}
-function abrirModalLista(){const el=document.getElementById('modal-lista');if(el){el.classList.remove('hidden');document.body.classList.add('overflow-hidden');document.getElementById('nome-lista')?.focus();}}
+function abrirModalLista(){const el=document.getElementById('modal-lista');if(el){el.classList.remove('hidden');const inlineNaPaginaQuestoes=document.body.classList.contains('page-questions');if(!inlineNaPaginaQuestoes)document.body.classList.add('overflow-hidden');const input=document.getElementById('nome-lista');input?.focus();if(inlineNaPaginaQuestoes)el.scrollIntoView({behavior:'smooth',block:'nearest'});}}
 function fecharModalLista(){document.getElementById('modal-lista')?.classList.add('hidden');document.body.classList.remove('overflow-hidden');}
 async function salvarListaAtual(){
  const input=document.getElementById('nome-lista'),nome=input?input.value.trim():'';if(!nome){mostrarToast('Informe um nome para a lista.');input?.focus();return;}

@@ -892,3 +892,29 @@ body.page-dashboard, body.page-questions, body.page-notebooks, body.page-profile
     transform: none !important;
   }
 }
+
+
+/* Criação de lista integrada à página de questões (sem janela sobreposta). */
+.page-questions .question-list-inline { display:none !important; }
+.page-questions .question-list-inline:not(.hidden) {
+    display:block !important; position:relative; width:100%; margin:16px 0 22px; padding:21px 22px;
+    border:1px solid #dce9e8; border-radius:15px; background:#fff;
+    box-shadow:0 7px 24px rgba(32,70,74,.07); scroll-margin-top:84px;
+}
+.page-questions .question-list-inline.hidden { display:none !important; }
+.question-list-inline-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding-bottom:16px; border-bottom:1px solid #edf2f2; }
+.question-list-inline-heading h2 { margin:5px 0; color:#304951; font-size:18px; font-weight:850; line-height:1.3; }
+.question-list-inline-heading p { margin:0; color:#84969b; font-size:11px; line-height:1.6; }
+.question-list-inline-name { margin-top:17px; max-width:560px; }
+.question-list-inline-name input { width:100%; min-height:43px; padding:10px 12px; border:1px solid #dfe9e9; border-radius:9px; color:#324c53; background:#fbfdfd; outline:none; font-size:12px; }
+.question-list-inline-name input:focus { border-color:#73cbc4; box-shadow:0 0 0 3px rgba(37,179,173,.13); }
+.question-list-inline-footer { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:18px; padding-top:15px; border-top:1px solid #edf2f2; }
+.question-list-inline-help { color:#89999e; font-size:10px; line-height:1.5; }
+.question-list-inline-actions { display:flex; align-items:center; justify-content:flex-end; gap:9px; flex:0 0 auto; }
+@media(max-width:767px) {
+ .page-questions .question-list-inline:not(.hidden) { margin:12px 0 18px; padding:16px; border-radius:13px; }
+ .question-list-inline-heading h2 { font-size:16px; }
+ .question-list-inline-footer { align-items:stretch; flex-direction:column; gap:12px; }
+ .question-list-inline-actions { display:grid; grid-template-columns:1fr 1fr; }
+ .question-list-inline-actions button { width:100%; padding:0 10px; }
+}
