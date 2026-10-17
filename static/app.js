@@ -803,3 +803,574 @@ async function copiarLinkAcervoDrive() {
         window.prompt("Copie o link da biblioteca do Google Drive:", RESP_ACERVO_DRIVE_URL);
     }
 }
+
+
+// ==========================================
+// NOVA INTERFACE VISUAL DOS FILTROS DO BANCO
+// ==========================================
+let respMetadataCounts = {};
+let respExpandedMaterias = new Set();
+let respExpandedAssuntos = new Set();
+
+function respFormatoNumero(valor) {
+    const numero = Number(valor || 0);
+    return numero.toLocaleString('pt-BR');
+}
+
+function respSetSelectOptions(id, items) {
+    const select = document.getElementById(id);
+    if (!select) return;
+    const selected = new Set(Array.from(select.selectedOptions || []).map(option => option.value));
+    select.innerHTML = '';
+    items.forEach(item => {
+        const option = document.createElement('option');
+        option.value = String(item.value);
+        option.textContent = String(item.label);
+        if (item.count != null) option.dataset.count = String(item.count);
+        if (selected.has(option.value)) option.selected = true;
+        select.appendChild(option);
+    });
+}
+
+async function carregarFiltros() {
+    try {
+        const response = await fetch('/api/categorias');
+        const data = await response.json();
+        categoriasDB = data && typeof data === 'object' ? data : {};
+        const materias = [];
+        const assuntos = new Map();
+        const subassuntos = new Map();
+
+        Object.keys(categoriasDB).sort((a,b) => a.localeCompare(b,'pt-BR')).forEach(materia => {
+            const registro = categoriasDB[materia] || {};
+            materias.push({value:materia,label:materia,count:Number(registro.count || 0)});
+            Object.entries(registro.assuntos || {}).forEach(([assunto,info]) => {
+                assuntos.set(assunto,(assuntos.get(assunto)||0)+Number((info||{}).count || 0));
+                Object.entries((info||{}).subs || {}).forEach(([subassunto,count]) => {
+                    subassuntos.set(subassunto,(subassuntos.get(subassunto)||0)+Number(count||0));
+                });
+            });
+        });
+
+        respSetSelectOptions('f-mat',materias);
+        respSetSelectOptions('f-ass',Array.from(assuntos,([value,count])=>({value,label:value,count})).sort((a,b)=>a.label.localeCompare(b.label,'pt-BR')));
+        respSetSelectOptions('f-sub',Array.from(subassuntos,([value,count])=>({value,label:value,count})).sort((a,b)=>a.label.localeCompare(b.label,'pt-BR')));
+        renderizarArvoreTemas();
+        renderizarHistoricoFiltros();
+    } catch (error) {
+        categoriasDB = {};
+        const host = document.getElementById('filter-list-tema');
+        if (host) host.innerHTML = '<div class="question-option-empty">Não foi possível carregar as especialidades agora.</div>';
+    }
+}
+
+async function carregarOpcoesMetadados() {
+    const ids = {instituicao:'f-inst',ano:'f-ano',regiao:'f-regiao',finalidade:'f-finalidade',professor:'f-professor'};
+    try {
+        const response = await fetch('/api/questao-filtros');
+        if (!response.ok) throw new Error('Erro ao carregar opções.');
+        const data = await response.json();
+        respMetadataCounts = data.contagens || {};
+        Object.keys(ids).forEach(campo => {
+            const select = document.getElementById(ids[campo]);
+            if (!select) return;
+            const previous = new Set(Array.from(select.selectedOptions).map(option=>option.value));
+            const options = (data.opcoes && data.opcoes[campo]) || [];
+            select.innerHTML = '';
+            options.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                option.dataset.count = String(((respMetadataCounts[campo] || {})[value]) || 0);
+                if (previous.has(value)) option.selected = true;
+                select.appendChild(option);
+            });
+            select.disabled = options.length === 0;
+            const help = document.querySelector('[data-metadata-help="' + campo + '"]');
+            if (help) help.textContent = options.length ? 'Opções com contagem baseada nas questões disponíveis.' : 'A base atual não fornece opções para este filtro.';
+        });
+
+        const disponibilidade = data.disponibilidade || {};
+        document.querySelectorAll('[data-advanced-select="f-video"]').forEach(input => {
+            input.disabled = !disponibilidade.video;
+        });
+        if (!disponibilidade.video) {
+            const help = document.getElementById('advanced-filter-help');
+            if (help) help.textContent = 'A base atual ainda não fornece informação suficiente para filtrar por vídeo.';
+        }
+        renderizarListasMetadados();
+    } catch (error) {
+        Object.values(ids).forEach(id => {
+            const select = document.getElementById(id);
+            if (select) select.innerHTML = '';
+        });
+        renderizarListasMetadados();
+    }
+}
+
+function renderizarArvoreTemas() {
+    const host = document.getElementById('filter-list-tema');
+    if (!host) return;
+    const scrollTop = host.scrollTop;
+    const searchInput = document.querySelector('[data-filter-search="tema"]');
+    const termo = String(searchInput ? searchInput.value : '').trim().toLocaleLowerCase('pt-BR');
+    const materiasSel = new Set(getSelectedValues('f-mat'));
+    const assuntosSel = new Set(getSelectedValues('f-ass'));
+    const subsSel = new Set(getSelectedValues('f-sub'));
+    let html = '';
+    let totalMaterias = 0;
+    let totalVisiveis = 0;
+
+    Object.keys(categoriasDB || {}).sort((a,b)=>a.localeCompare(b,'pt-BR')).forEach(materia => {
+        const registro = categoriasDB[materia] || {};
+        const assuntos = Object.entries(registro.assuntos || {}).sort((a,b)=>a[0].localeCompare(b[0],'pt-BR'));
+        const assuntosCorrespondentes = assuntos.filter(([assunto,info]) => {
+            const subs = Object.keys((info||{}).subs || {});
+            return !termo || materia.toLocaleLowerCase('pt-BR').includes(termo) || assunto.toLocaleLowerCase('pt-BR').includes(termo) || subs.some(sub=>sub.toLocaleLowerCase('pt-BR').includes(termo));
+        });
+        if (termo && !materia.toLocaleLowerCase('pt-BR').includes(termo) && !assuntosCorrespondentes.length) return;
+        totalMaterias++;
+        const materiaExpandida = respExpandedMaterias.has(materia) || (Boolean(termo) && !materia.toLocaleLowerCase('pt-BR').includes(termo)) || assuntos.some(([assunto])=>assuntosSel.has(assunto));
+        totalVisiveis++;
+        html += '<div class="question-tree-item">';
+        html += '<div class="question-tree-row question-tree-level-0"><label class="question-option-label"><input type="checkbox" data-theme-kind="materia" data-filter-value="' + textoSeguro(materia) + '"' + (materiasSel.has(materia)?' checked':'') + '><span class="question-option-name">' + textoSeguro(materia) + '</span></label><span class="question-option-count">' + respFormatoNumero(registro.count) + '</span>';
+        if (assuntos.length) html += '<button type="button" class="question-tree-expand" data-expand-materia="' + textoSeguro(materia) + '" aria-expanded="' + String(materiaExpandida) + '" aria-label="' + (materiaExpandida?'Recolher ':'Expandir ') + textoSeguro(materia) + '">' + (materiaExpandida?'−':'+') + '</button>';
+        html += '</div>';
+
+        if (materiaExpandida) {
+            assuntos.forEach(([assunto,info]) => {
+                const subsObj = (info||{}).subs || {};
+                const subs = Object.keys(subsObj).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+                const matches = !termo || materia.toLocaleLowerCase('pt-BR').includes(termo) || assunto.toLocaleLowerCase('pt-BR').includes(termo) || subs.some(sub=>sub.toLocaleLowerCase('pt-BR').includes(termo));
+                if (!matches) return;
+                const key = materia + '::' + assunto;
+                const assuntoExpandido = respExpandedAssuntos.has(key) || (Boolean(termo) && !assunto.toLocaleLowerCase('pt-BR').includes(termo) && subs.some(sub=>sub.toLocaleLowerCase('pt-BR').includes(termo))) || subs.some(sub=>subsSel.has(sub));
+                totalVisiveis++;
+                html += '<div class="question-tree-row question-tree-level-1"><label class="question-option-label"><input type="checkbox" data-theme-kind="assunto" data-filter-value="' + textoSeguro(assunto) + '"' + (assuntosSel.has(assunto)?' checked':'') + '><span class="question-option-name">' + textoSeguro(assunto) + '</span></label><span class="question-option-count">' + respFormatoNumero((info||{}).count) + '</span>';
+                if (subs.length) html += '<button type="button" class="question-tree-expand" data-expand-assunto="' + textoSeguro(materia) + '" data-assunto="' + textoSeguro(assunto) + '" aria-expanded="' + String(assuntoExpandido) + '" aria-label="' + (assuntoExpandido?'Recolher ':'Expandir ') + textoSeguro(assunto) + '">' + (assuntoExpandido?'−':'+') + '</button>';
+                html += '</div>';
+                if (assuntoExpandido) {
+                    subs.forEach(subassunto => {
+                        if (termo && !materia.toLocaleLowerCase('pt-BR').includes(termo) && !assunto.toLocaleLowerCase('pt-BR').includes(termo) && !subassunto.toLocaleLowerCase('pt-BR').includes(termo)) return;
+                        totalVisiveis++;
+                        html += '<div class="question-tree-row question-tree-level-2"><label class="question-option-label"><input type="checkbox" data-theme-kind="subassunto" data-filter-value="' + textoSeguro(subassunto) + '"' + (subsSel.has(subassunto)?' checked':'') + '><span class="question-option-name">' + textoSeguro(subassunto) + '</span></label><span class="question-option-count">' + respFormatoNumero(subsObj[subassunto]) + '</span></div>';
+                    });
+                }
+            });
+        }
+        html += '</div>';
+    });
+
+    host.innerHTML = html || '<div class="question-option-empty">Nenhuma opção corresponde à sua busca.</div>';
+    host.scrollTop = scrollTop;
+    const total = document.getElementById('filter-total-tema');
+    if (total) total.textContent = respFormatoNumero(totalVisiveis) + ' opções encontradas';
+    const panelCount = document.getElementById('filter-visible-tema');
+    if (panelCount) panelCount.textContent = respFormatoNumero(totalMaterias) + ' especialidades';
+}
+
+function renderizarListaMetadados(campo) {
+    const ids = {instituicao:'f-inst',ano:'f-ano',regiao:'f-regiao',finalidade:'f-finalidade',professor:'f-professor'};
+    const select = document.getElementById(ids[campo]);
+    const host = document.getElementById('filter-list-' + campo);
+    if (!select || !host) return;
+    const searchInput = document.querySelector('[data-filter-search="' + campo + '"]');
+    const termo = String(searchInput ? searchInput.value : '').trim().toLocaleLowerCase('pt-BR');
+    const options = Array.from(select.options).filter(option => option.textContent.toLocaleLowerCase('pt-BR').includes(termo));
+    const total = document.getElementById('filter-total-' + campo);
+    if (total) total.textContent = respFormatoNumero(options.length) + ' opções encontradas';
+
+    host.innerHTML = options.length ? options.map(option => {
+        const count = (respMetadataCounts[campo] || {})[option.value] || option.dataset.count || 0;
+        return '<label class="question-option-row"><input type="checkbox" data-filter-source="' + ids[campo] + '" data-filter-value="' + textoSeguro(option.value) + '"' + (option.selected?' checked':'') + '><span class="question-option-name">' + textoSeguro(option.textContent) + '</span><span class="question-option-count">' + respFormatoNumero(count) + '</span></label>';
+    }).join('') : '<div class="question-option-empty">' + (select.options.length ? 'Nenhum resultado para esta busca.' : 'Sem metadados disponíveis nesta base.') + '</div>';
+}
+
+function renderizarListasMetadados() {
+    ['instituicao','ano','regiao','finalidade','professor'].forEach(renderizarListaMetadados);
+}
+
+function respSincronizarControlesVisuais() {
+    const status = document.getElementById('f-status');
+    document.querySelectorAll('[data-status-choice]').forEach(button => {
+        const active = status && status.value === button.dataset.statusChoice;
+        button.classList.toggle('is-active',Boolean(active));
+        button.setAttribute('aria-pressed',String(Boolean(active)));
+    });
+    document.querySelectorAll('[data-advanced-select]').forEach(input => {
+        const select = document.getElementById(input.dataset.advancedSelect);
+        input.checked = Boolean(select && select.value === input.dataset.advancedValue);
+        if (input.parentElement) input.parentElement.classList.toggle('is-on',input.checked);
+    });
+}
+
+function respAtualizarInterfaceFiltros() {
+    renderizarArvoreTemas();
+    renderizarListasMetadados();
+    respSincronizarControlesVisuais();
+    atualizarResumoFiltros();
+}
+
+function respAgendarContagemFiltros() {
+    if (window.respQuestionCountTimer) clearTimeout(window.respQuestionCountTimer);
+    window.respQuestionCountTimer = setTimeout(atualizarContagemFiltros,350);
+}
+
+async function atualizarContagemFiltros() {
+    const sequencia = (window.respQuestionCountSequence || 0) + 1;
+    window.respQuestionCountSequence = sequencia;
+    try {
+        const payload = montarPayloadFiltroCompleto(1);
+        payload.pagina = 1;
+        payload.limite = 1;
+        const response = await fetch('/api/questoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        const data = await response.json();
+        if (sequencia !== window.respQuestionCountSequence) return;
+        if (!response.ok || data.erro_interno) throw new Error(data.erro_interno || 'Falha ao contar questões');
+        const count = document.getElementById('questoes-count');
+        if (count) count.textContent = respFormatoNumero(data.total || 0);
+    } catch (error) {
+        const count = document.getElementById('questoes-count');
+        if (count && count.textContent === '—') count.textContent = '—';
+    }
+}
+
+function bindQuestionFilterInterface() {
+    const left = document.getElementById('question-filter-left');
+    if (left && left.dataset.filterEventsBound !== 'true') {
+        left.dataset.filterEventsBound = 'true';
+        left.addEventListener('change',event => {
+            const input = event.target;
+            if (input.matches('[data-theme-kind]')) {
+                const map = {materia:'f-mat',assunto:'f-ass',subassunto:'f-sub'};
+                const select = document.getElementById(map[input.dataset.themeKind]);
+                if (select) {
+                    const option = Array.from(select.options).find(item=>item.value===input.dataset.filterValue);
+                    if (option) option.selected = input.checked;
+                }
+                respAtualizarInterfaceFiltros();
+                respAgendarContagemFiltros();
+                return;
+            }
+            if (input.matches('[data-filter-source]')) {
+                const select = document.getElementById(input.dataset.filterSource);
+                if (select) {
+                    const option = Array.from(select.options).find(item=>item.value===input.dataset.filterValue);
+                    if (option) option.selected = input.checked;
+                }
+                respAtualizarInterfaceFiltros();
+                respAgendarContagemFiltros();
+                return;
+            }
+            if (input.matches('[data-advanced-select]')) {
+                const select = document.getElementById(input.dataset.advancedSelect);
+                const group = input.dataset.advancedGroup;
+                if (input.checked) {
+                    document.querySelectorAll('[data-advanced-group="' + group + '"]').forEach(other=>{if(other!==input){other.checked=false;if(other.parentElement)other.parentElement.classList.remove('is-on');}});
+                    if (select) select.value = input.dataset.advancedValue;
+                } else if (select && select.value === input.dataset.advancedValue) {
+                    select.value = '';
+                }
+                respSincronizarControlesVisuais();
+                atualizarResumoFiltros();
+                respAgendarContagemFiltros();
+                return;
+            }
+            if (input.matches('input[name="f-tipo"]')) {
+                atualizarResumoFiltros();
+                respAgendarContagemFiltros();
+            }
+        });
+        left.addEventListener('click',event => {
+            const expandeMateria = event.target.closest('[data-expand-materia]');
+            if (expandeMateria) {
+                const key = expandeMateria.dataset.expandMateria;
+                if (respExpandedMaterias.has(key)) respExpandedMaterias.delete(key); else respExpandedMaterias.add(key);
+                renderizarArvoreTemas();
+                return;
+            }
+            const expandeAssunto = event.target.closest('[data-expand-assunto]');
+            if (expandeAssunto) {
+                const key = expandeAssunto.dataset.expandAssunto + '::' + expandeAssunto.dataset.assunto;
+                if (respExpandedAssuntos.has(key)) respExpandedAssuntos.delete(key); else respExpandedAssuntos.add(key);
+                renderizarArvoreTemas();
+                return;
+            }
+            const status = event.target.closest('[data-status-choice]');
+            if (status) {
+                const select = document.getElementById('f-status');
+                if (select) select.value = status.dataset.statusChoice;
+                respSincronizarControlesVisuais();
+                atualizarResumoFiltros();
+                respAgendarContagemFiltros();
+            }
+        });
+        left.addEventListener('input',event => {
+            const search = event.target.closest('[data-filter-search]');
+            if (!search) return;
+            const campo = search.dataset.filterSearch;
+            if (campo === 'tema') renderizarArvoreTemas();
+            else renderizarListaMetadados(campo);
+        });
+    }
+
+    document.querySelectorAll('[data-filter-tab]').forEach(button => {
+        if (button.dataset.tabEventsBound === 'true') return;
+        button.dataset.tabEventsBound = 'true';
+        button.addEventListener('click',() => {
+            const target = button.dataset.filterTab;
+            document.querySelectorAll('[data-filter-tab]').forEach(item => {
+                const active = item === button;
+                item.classList.toggle('is-active',active);
+                item.setAttribute('aria-selected',String(active));
+            });
+            document.querySelectorAll('[data-filter-group]').forEach(group => {
+                const active = group.dataset.filterGroup === target;
+                group.hidden = !active;
+                group.classList.toggle('is-active',active);
+            });
+        });
+    });
+
+    document.querySelectorAll('.question-filter-source').forEach(select => {
+        if (select.dataset.sourceEventsBound === 'true') return;
+        select.dataset.sourceEventsBound = 'true';
+        select.addEventListener('change',() => {
+            respAtualizarInterfaceFiltros();
+            respAgendarContagemFiltros();
+        });
+    });
+
+    const busca = document.getElementById('f-busca');
+    if (busca && busca.dataset.questionSearchBound !== 'true') {
+        busca.dataset.questionSearchBound = 'true';
+        busca.addEventListener('input',() => {
+            atualizarResumoFiltros();
+            respAgendarContagemFiltros();
+        });
+    }
+
+    const chips = document.getElementById('question-filter-summary-chips');
+    if (chips && chips.dataset.chipsBound !== 'true') {
+        chips.dataset.chipsBound = 'true';
+        chips.addEventListener('click',event => {
+            const chip = event.target.closest('[data-chip-id]');
+            if (chip) removerFiltroQuestao(chip.dataset.chipId,chip.dataset.chipValue);
+        });
+    }
+
+    const edit = document.getElementById('question-summary-edit');
+    if (edit && edit.dataset.editBound !== 'true') {
+        edit.dataset.editBound = 'true';
+        edit.addEventListener('click',() => {
+            const summary = document.querySelector('.question-filter-summary');
+            const active = edit.getAttribute('aria-pressed') !== 'true';
+            edit.setAttribute('aria-pressed',String(active));
+            edit.classList.toggle('is-active',active);
+            if (summary) summary.classList.toggle('is-editing',active);
+        });
+    }
+
+    respAtualizarInterfaceFiltros();
+}
+
+function atualizarResumoFiltros() {
+    const box = document.getElementById('question-filter-summary-chips');
+    if (!box) return;
+    const chips = [];
+    const status = document.getElementById('f-status');
+    if (status && status.value && status.value !== 'todas') {
+        const option = status.options[status.selectedIndex];
+        chips.push({id:'f-status',value:status.value,text:option ? option.textContent : status.value});
+    }
+
+    const fields = [
+        ['f-mat','Especialidade'],
+        ['f-ass','Assunto'],
+        ['f-sub','Subassunto'],
+        ['f-inst','Instituição'],
+        ['f-ano','Ano'],
+        ['f-regiao','Região'],
+        ['f-finalidade','Finalidade'],
+        ['f-professor','Professor']
+    ];
+    fields.forEach(([id,label]) => {
+        const select = document.getElementById(id);
+        if (!select) return;
+        Array.from(select.selectedOptions).forEach(option => {
+            chips.push({id,value:option.value,text:label + ': ' + (option.dataset.label || option.textContent)});
+        });
+    });
+
+    const word = valorSelecionado('f-busca');
+    if (word) chips.push({id:'f-busca',value:word,text:'Busca: ' + word});
+    document.querySelectorAll('input[name="f-tipo"]:checked').forEach(input => {
+        chips.push({id:'f-tipo',value:input.value,text:input.parentElement.textContent.trim()});
+    });
+    const advancedLabels = {
+        'f-solucao-texto':{'com':'Com solução em texto','sem':'Sem solução em texto'},
+        'f-video':{'com':'Com solução por vídeo','sem':'Sem solução por vídeo'},
+        'f-vigencia':{'validas':'Gabarito válido','anuladas':'Questões anuladas','desatualizadas':'Questões desatualizadas'}
+    };
+    Object.keys(advancedLabels).forEach(id => {
+        const select = document.getElementById(id);
+        if (select && select.value) chips.push({id,value:select.value,text:advancedLabels[id][select.value] || select.value});
+    });
+
+    box.innerHTML = chips.length ? chips.map(chip => (
+        '<button type="button" class="question-filter-chip" data-chip-id="' + textoSeguro(chip.id) + '" data-chip-value="' + textoSeguro(chip.value) + '"><span>' + textoSeguro(chip.text) + '</span><b aria-hidden="true">×</b></button>'
+    )).join('') : '<span class="question-summary-empty">Nenhum critério adicional selecionado. Você pode explorar o banco inteiro.</span>';
+    const emptyNote = document.querySelector('.question-summary-footnote');
+    if (emptyNote) emptyNote.style.opacity = chips.length ? '1' : '.62';
+}
+
+function removerFiltroQuestao(id,value) {
+    const select = document.getElementById(id);
+    if (id === 'f-tipo') {
+        document.querySelectorAll('input[name="f-tipo"]').forEach(input=>{if(input.value===value)input.checked=false;});
+    } else if (select && select.multiple) {
+        Array.from(select.options).forEach(option=>{if(option.value===value)option.selected=false;});
+    } else if (select) {
+        select.value = id === 'f-status' ? 'todas' : '';
+    } else if (id === 'f-busca') {
+        const search = document.getElementById('f-busca');
+        if (search) search.value = '';
+    }
+    respAtualizarInterfaceFiltros();
+    aplicarFiltros(1);
+}
+
+function redefinirFiltrosQuestao() {
+    ['f-mat','f-ass','f-sub','f-inst','f-ano','f-regiao','f-finalidade','f-professor'].forEach(id=>{
+        const select=document.getElementById(id);
+        if(select)Array.from(select.options).forEach(option=>option.selected=false);
+    });
+    ['f-solucao-texto','f-video','f-vigencia'].forEach(id=>{const select=document.getElementById(id);if(select)select.value='';});
+    const status=document.getElementById('f-status');if(status)status.value='todas';
+    const busca=document.getElementById('f-busca');if(busca)busca.value='';
+    document.querySelectorAll('input[name="f-tipo"]').forEach(input=>input.checked=false);
+    document.querySelectorAll('[data-filter-search]').forEach(input=>input.value='');
+    respExpandedMaterias.clear();
+    respExpandedAssuntos.clear();
+    respAtualizarInterfaceFiltros();
+    aplicarFiltros(1);
+}
+
+function respTemFiltrosAtivos(payload) {
+    const dados = payload || montarPayloadFiltroCompleto(20);
+    const avancados = dados.filtrosAvancados || {};
+    const metadados = dados.metadados || {};
+    return Boolean(
+        (dados.materia||[]).length || (dados.assunto||[]).length || (dados.subassunto||[]).length ||
+        dados.palavraChave || (dados.statusProgresso && dados.statusProgresso !== 'todas') ||
+        Object.values(metadados).some(valores=>Array.isArray(valores)&&valores.length) ||
+        (avancados.tipos||[]).length || avancados.solucaoTexto || avancados.video || avancados.vigencia
+    );
+}
+
+async function aplicarFiltros(pagina = 1) {
+    paginaAtual = pagina;
+    const limite = parseInt(valorSelecionado('limite-pagina') || '20',10);
+    const payload = montarPayloadFiltroCompleto(limite);
+    payload.pagina = paginaAtual;
+    const aviso = document.getElementById('aviso-aleatorio');
+    if (aviso) aviso.classList.toggle('hidden',respTemFiltrosAtivos(payload));
+
+    if (pagina === 1 && respTemFiltrosAtivos(payload)) registrarHistoricoFiltro(payload);
+    try {
+        const response = await fetch('/api/questoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        const data = await response.json();
+        if (!response.ok || data.erro_interno) throw new Error(data.erro_interno || 'Não foi possível carregar as questões.');
+        renderizarQuestoesUI(data.questoes || [],false);
+        renderizarPaginacaoUI(Number(data.total||0),limite);
+        const count = document.getElementById('questoes-count');
+        if (count) count.textContent = respFormatoNumero(data.total || 0);
+        atualizarResumoFiltros();
+        if (document.getElementById('f-mat')) window.scrollTo({top:0,behavior:'smooth'});
+    } catch (error) {
+        mostrarToast(error.message || 'Erro ao aplicar os filtros.',{titulo:'Banco de questões'});
+    }
+}
+
+function resumoVisualFiltroRecente(config = {}) {
+    const lista = value => Array.isArray(value) ? value.filter(Boolean).map(String) : (value ? [String(value)] : []);
+    const materias=lista(config.materia), assuntos=lista(config.assunto), subassuntos=lista(config.subassunto);
+    const meta=config.metadados||{}, av=config.filtrosAvancados||{};
+    const statusLabels={ineditas:'Não resolvidas',feitas:'Já resolvidas',erradas:'Questões que errei'};
+    const details=[];
+    if (assuntos.length) details.push('Assunto: '+assuntos.slice(0,2).join(', '));
+    if (subassuntos.length) details.push('Subassunto: '+subassuntos.slice(0,2).join(', '));
+    if (lista(meta.instituicao).length) details.push('Instituição: '+lista(meta.instituicao).slice(0,2).join(', '));
+    if (lista(meta.ano).length) details.push('Ano: '+lista(meta.ano).slice(0,2).join(', '));
+    if (lista(meta.regiao).length) details.push('Região: '+lista(meta.regiao).slice(0,2).join(', '));
+    if (lista(meta.finalidade).length) details.push('Finalidade: '+lista(meta.finalidade).slice(0,2).join(', '));
+    if (lista(meta.professor).length) details.push('Professor: '+lista(meta.professor).slice(0,2).join(', '));
+    if (av.tipos && av.tipos.length) details.push('Tipo: '+av.tipos.join(', '));
+    if (av.solucaoTexto) details.push(av.solucaoTexto==='com'?'Com solução em texto':'Sem solução em texto');
+    if (av.video) details.push(av.video==='com'?'Com vídeo':'Sem vídeo');
+    if (av.vigencia) details.push('Vigência: '+av.vigencia);
+    const word=String(config.palavraChave||'').trim();
+    const status=statusLabels[config.statusProgresso]||'';
+    const titulo=assuntos[0] || materias[0] || (lista(meta.instituicao)[0]) || (lista(meta.ano)[0]) || word || status || 'Questões filtradas';
+    if (word && titulo!==word) details.push('Busca: '+word);
+    if (status && titulo!==status) details.push(status);
+    if (materias.length && titulo!==materias[0]) details.push('Especialidade: '+materias.slice(0,2).join(', '));
+    return {titulo,detalhe:details.filter(x=>x!==titulo).slice(0,2).join(' · ')};
+}
+
+function registrarHistoricoFiltro(config) {
+    const resumo=resumoVisualFiltroRecente(config);
+    const signature=JSON.stringify({
+        materia:config.materia||[],assunto:config.assunto||[],subassunto:config.subassunto||[],
+        palavraChave:config.palavraChave||'',statusProgresso:config.statusProgresso||'todas',
+        metadados:config.metadados||{},filtrosAvancados:config.filtrosAvancados||{}
+    });
+    const older=historicoUsuario.map(item=>({item,signature:JSON.stringify({
+        materia:item.config?.materia||[],assunto:item.config?.assunto||[],subassunto:item.config?.subassunto||[],
+        palavraChave:item.config?.palavraChave||'',statusProgresso:item.config?.statusProgresso||'todas',
+        metadados:item.config?.metadados||{},filtrosAvancados:item.config?.filtrosAvancados||{}
+    })}));
+    if (older[0] && older[0].signature===signature) return;
+    historicoUsuario=[{rotulo:resumo.titulo,config:config},...historicoUsuario.filter(item=>{
+        const oldSignature=JSON.stringify({
+            materia:item.config?.materia||[],assunto:item.config?.assunto||[],subassunto:item.config?.subassunto||[],
+            palavraChave:item.config?.palavraChave||'',statusProgresso:item.config?.statusProgresso||'todas',
+            metadados:item.config?.metadados||{},filtrosAvancados:item.config?.filtrosAvancados||{}
+        });
+        return oldSignature!==signature;
+    })].slice(0,8);
+    syncDB('historico',historicoUsuario);
+    renderizarHistoricoFiltros();
+}
+
+function aplicarHistorico(index) {
+    const item=historicoUsuario[index];
+    if (!item || !item.config) return;
+    const config=item.config;
+    const multi={
+        materia:'f-mat',assunto:'f-ass',subassunto:'f-sub',
+        instituicao:'f-inst',ano:'f-ano',regiao:'f-regiao',finalidade:'f-finalidade',professor:'f-professor'
+    };
+    Object.keys(multi).forEach(campo=>{
+        const select=document.getElementById(multi[campo]);
+        const values=Array.isArray(config[campo])?config[campo]:[];
+        if(select)Array.from(select.options).forEach(option=>option.selected=values.includes(option.value));
+    });
+    const search=document.getElementById('f-busca');if(search)search.value=config.palavraChave||'';
+    const status=document.getElementById('f-status');if(status)status.value=config.statusProgresso||'todas';
+    const adv=config.filtrosAvancados||{};
+    ['f-solucao-texto','f-video','f-vigencia'].forEach((id,index)=>{
+        const key=['solucaoTexto','video','vigencia'][index],select=document.getElementById(id);
+        if(select)select.value=adv[key]||'';
+    });
+    document.querySelectorAll('input[name="f-tipo"]').forEach(input=>input.checked=(adv.tipos||[]).includes(input.value));
+    respAtualizarInterfaceFiltros();
+    fetch('/api/questoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)}).then(async response=>{
+        const data=await response.json();
+        if(!response.ok || data.erro_interno)throw new Error(data.erro_interno||'Falha ao reaplicar o filtro.');
+        renderizarQuestoesUI(data.questoes||[],false);
+        renderizarPaginacaoUI(Number(data.total||0),Number(config.limite||20));
+        const count=document.getElementById('questoes-count');if(count)count.textContent=respFormatoNumero(data.total||0);
+        respAgendarContagemFiltros();
+    }).catch(error=>mostrarToast(error.message||'Não foi possível recuperar o filtro.'));
+}

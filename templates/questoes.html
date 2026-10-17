@@ -6,7 +6,7 @@
     <title>RESPdi - Simulado</title>
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/static/theme.css?v=20261017-9">
+    <link rel="stylesheet" href="/static/theme.css?v=20261017-10">
     <style>
         .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -26,115 +26,212 @@
     
     {% include 'sidebar.html' %}
     
-    <div class="px-4 pt-6 md:pl-32 md:pt-10 md:pr-10 max-w-6xl mx-auto animate-fade-in-up">
-        
-        <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4 border-b border-gray-200 pb-4">
+
+    <div class="question-page-shell px-4 pt-6 md:pl-32 md:pt-8 md:pr-8 max-w-6xl mx-auto animate-fade-in-up">
+        <header class="question-page-header">
             <div>
-                <h1 class="text-3xl md:text-4xl font-black text-gray-900 mb-1">Banco de questões</h1>
-                <p class="text-gray-500 text-sm md:text-base">Personalize sua prática por matéria, assunto e histórico de resolução.</p>
+                <span class="question-page-kicker">RESPdi · BANCO DE QUESTÕES</span>
+                <h1>Filtre questões de acordo com seu objetivo</h1>
+                <p>Combine os critérios, acompanhe o resultado e monte sua próxima sessão de estudos.</p>
             </div>
-            
-            <div class="flex items-center gap-4 w-full md:w-auto">
-                <label class="flex items-center cursor-pointer bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 w-full md:w-auto justify-between">
-                    <span class="text-sm font-bold text-gray-700 mr-3">Modo Anti-Spoiler</span>
-                    <div class="relative">
-                        <input type="checkbox" id="toggle-temas" class="sr-only" onchange="alternarTemas()">
-                        <div class="block bg-gray-300 w-10 h-6 rounded-full transition toggle-label"></div>
-                        <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform toggle-dot shadow-sm"></div>
-                    </div>
+            <label class="question-anti-spoiler">
+                <span>Modo Anti-Spoiler</span>
+                <span class="question-switch">
+                    <input type="checkbox" id="toggle-temas" onchange="alternarTemas()">
+                    <span class="question-switch-track"></span>
+                </span>
+            </label>
+        </header>
+
+        <section id="question-filter-panel" class="question-filter-panel">
+            <div class="question-builder-toolbar">
+                <label class="question-search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg>
+                    <input type="search" id="f-busca" placeholder="Pesquise por palavra no enunciado ou na resolução..." autocomplete="off">
+                    <span>BUSCA</span>
                 </label>
+                <div class="question-toolbar-tools">
+                    <label class="question-page-size"><span>Exibir</span><select id="limite-pagina"><option value="20">20 / página</option><option value="50">50 / página</option><option value="100">100 / página</option></select></label>
+                    <button type="button" class="question-toolbar-button" onclick="gerarPDF()" title="Exportar questões em PDF">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11"></path><path d="m8 10 4 4 4-4"></path><path d="M5 17v3h14v-3"></path></svg><span>Exportar PDF</span>
+                    </button>
+                    <button type="button" class="question-toolbar-button" onclick="abrirModalCaderno()" title="Salvar como caderno">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v18H7.5A2.5 2.5 0 0 0 5 22z"></path><path d="M5 4.5V22"></path><path d="M9 7h7M9 11h7"></path></svg><span>Salvar caderno</span>
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <!-- Filtros e Pesquisa -->
-        <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 mb-6 question-filter-panel">
-            <div class="mb-4">
-                <input type="text" id="f-busca" placeholder="Pesquisar palavra-chave no enunciado..." class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm md:text-base font-medium transition">
-            </div>
-            
-            
-            <div class="question-filter-tabs" role="tablist" aria-label="Categorias de filtros">
-              <button type="button" class="question-filter-tab is-active" data-filter-tab="tema" role="tab" aria-selected="true">Especialidade / Assunto</button>
-              <button type="button" class="question-filter-tab" data-filter-tab="instituicao" role="tab" aria-selected="false">Instituição</button>
-              <button type="button" class="question-filter-tab" data-filter-tab="ano" role="tab" aria-selected="false">Ano</button>
-              <button type="button" class="question-filter-tab" data-filter-tab="regiao" role="tab" aria-selected="false">Região</button>
-              <button type="button" class="question-filter-tab" data-filter-tab="finalidade" role="tab" aria-selected="false">Finalidade</button>
-              <button type="button" class="question-filter-tab" data-filter-tab="professor" role="tab" aria-selected="false">Professor</button>
-              <button type="button" class="question-filter-tab" data-filter-tab="avancados" role="tab" aria-selected="false">Filtros avançados</button>
-            </div>
+            <nav class="question-filter-tabs" role="tablist" aria-label="Categorias de filtros">
+                <button type="button" class="question-filter-tab is-active" data-filter-tab="tema" role="tab" aria-selected="true"><span class="question-tab-check">✓</span><span>Especialidade / Assunto</span></button>
+                <button type="button" class="question-filter-tab" data-filter-tab="instituicao" role="tab" aria-selected="false"><span class="question-tab-check">✓</span><span>Instituição</span></button>
+                <button type="button" class="question-filter-tab" data-filter-tab="ano" role="tab" aria-selected="false"><span class="question-tab-check">✓</span><span>Ano</span></button>
+                <button type="button" class="question-filter-tab" data-filter-tab="regiao" role="tab" aria-selected="false"><span class="question-tab-check">✓</span><span>Região</span></button>
+                <button type="button" class="question-filter-tab" data-filter-tab="finalidade" role="tab" aria-selected="false"><span class="question-tab-check">✓</span><span>Finalidade</span></button>
+                <button type="button" class="question-filter-tab" data-filter-tab="professor" role="tab" aria-selected="false"><span class="question-tab-check">✓</span><span>Professor</span></button>
+                <button type="button" class="question-filter-tab question-filter-tab-advanced" data-filter-tab="avancados" role="tab" aria-selected="false"><span class="question-tab-gear">⚙</span><span>Filtros avançados</span></button>
+            </nav>
+
             <div class="question-filter-workspace">
-              <div class="question-filter-left">
-                <div class="question-filter-group is-active" data-filter-group="tema" role="tabpanel">
-                  <div class="question-filter-grid">
-                    <label class="question-filter-field"><span class="question-filter-label">Status de resolução</span><select id="f-status" class="question-filter-select"><option value="todas" selected>Todos os status</option><option value="ineditas">Apenas inéditas</option><option value="feitas">Já respondidas</option><option value="erradas">Respondidas incorretamente</option></select></label>
-                    <label class="question-filter-field"><span class="question-filter-label">Especialidade / matéria</span><select id="f-mat" multiple class="question-filter-multi"></select></label>
-                    <label class="question-filter-field"><span class="question-filter-label">Assunto</span><select id="f-ass" multiple disabled class="question-filter-multi"></select></label>
-                    <label class="question-filter-field"><span class="question-filter-label">Subassunto</span><select id="f-sub" multiple disabled class="question-filter-multi"></select></label>
-                  </div>
-                  <p class="question-filter-help">Você pode combinar matérias; assuntos e subassuntos dependem das seleções anteriores.</p>
-                </div>
-                <div class="question-filter-group" data-filter-group="instituicao" role="tabpanel" hidden><label class="question-filter-field"><span class="question-filter-label">Instituição / banca</span><select id="f-inst" multiple class="question-filter-multi"></select></label><p class="question-filter-help" data-metadata-help="instituicao">Opções baseadas nos metadados disponíveis nas questões.</p></div>
-                <div class="question-filter-group" data-filter-group="ano" role="tabpanel" hidden><label class="question-filter-field"><span class="question-filter-label">Ano da prova</span><select id="f-ano" multiple class="question-filter-multi"></select></label><p class="question-filter-help" data-metadata-help="ano">Opções baseadas nos metadados disponíveis nas questões.</p></div>
-                <div class="question-filter-group" data-filter-group="regiao" role="tabpanel" hidden><label class="question-filter-field"><span class="question-filter-label">Região</span><select id="f-regiao" multiple class="question-filter-multi"></select></label><p class="question-filter-help" data-metadata-help="regiao">Opções baseadas nos metadados disponíveis nas questões.</p></div>
-                <div class="question-filter-group" data-filter-group="finalidade" role="tabpanel" hidden><label class="question-filter-field"><span class="question-filter-label">Finalidade da prova</span><select id="f-finalidade" multiple class="question-filter-multi"></select></label><p class="question-filter-help" data-metadata-help="finalidade">Opções baseadas nos metadados disponíveis nas questões.</p></div>
-                <div class="question-filter-group" data-filter-group="professor" role="tabpanel" hidden><label class="question-filter-field"><span class="question-filter-label">Professor / responsável pela resolução</span><select id="f-professor" multiple class="question-filter-multi"></select></label><p class="question-filter-help" data-metadata-help="professor">Opções baseadas nos metadados disponíveis nas questões.</p></div>
-                <div class="question-filter-group" data-filter-group="avancados" role="tabpanel" hidden>
-                  <section class="advanced-filter-section"><h3>Tipo de questão</h3><div class="advanced-filter-checks"><label><input type="checkbox" name="f-tipo" value="multipla_escolha"> Múltipla escolha</label><label><input type="checkbox" name="f-tipo" value="certo_errado"> Certo / Errado</label><label><input type="checkbox" name="f-tipo" value="discursiva"> Discursiva</label></div></section>
-                  <section class="advanced-filter-section"><h3>Soluções e vigência</h3><div class="question-filter-advanced-grid">
-                    <label class="question-filter-field"><span class="question-filter-label">Solução em texto</span><select id="f-solucao-texto" class="question-filter-select"><option value="">Todas</option><option value="com">Com solução em texto</option><option value="sem">Sem solução em texto</option></select></label>
-                    <label class="question-filter-field"><span class="question-filter-label">Solução em vídeo</span><select id="f-video" class="question-filter-select"><option value="">Todas</option><option value="com">Com vídeo</option><option value="sem">Sem vídeo</option></select></label>
-                    <label class="question-filter-field"><span class="question-filter-label">Vigência</span><select id="f-vigencia" class="question-filter-select"><option value="">Todas</option><option value="validas">Com gabarito válido</option><option value="anuladas">Anuladas / sem gabarito A–E</option><option value="desatualizadas">Desatualizadas</option></select></label>
-                  </div></section><p class="question-filter-help" id="advanced-filter-help">Os critérios de vídeo e vigência dependem dos metadados da base atual.</p>
-                </div>
-              </div>
-              <aside class="question-filter-summary" aria-live="polite">
-                <div class="question-summary-heading"><div><span class="question-filter-label">Sua seleção</span><h3>Incluir questões</h3></div><span class="question-count-pill"><strong id="questoes-count">—</strong><small>questões encontradas</small></span></div>
-                <div id="question-filter-summary-chips" class="question-filter-chips"><span class="question-summary-empty">Ajuste os filtros e confira as questões encontradas.</span></div>
-                <button type="button" class="question-filter-reset" onclick="redefinirFiltrosQuestao()">Redefinir filtros</button>
-              </aside>
+                <section class="question-filter-left" id="question-filter-left" aria-label="Opções de filtro">
+                    <div class="question-filter-group is-active" data-filter-group="tema" role="tabpanel">
+                        <div class="question-list-panel-heading">
+                            <div><h2>Selecione os critérios que deseja incluir</h2><p>Marque uma ou mais opções; as questões serão filtradas pela combinação escolhida.</p></div>
+                            <span class="question-filter-found" id="filter-total-tema">Carregando…</span>
+                        </div>
+                        <div class="question-status-filter">
+                            <span class="question-status-label">Status de resolução</span>
+                            <div class="question-status-options" role="group" aria-label="Status de resolução">
+                                <button type="button" class="question-status-option is-active" data-status-choice="todas">Todas</button>
+                                <button type="button" class="question-status-option" data-status-choice="ineditas">Não resolvidas</button>
+                                <button type="button" class="question-status-option" data-status-choice="feitas">Já resolvidas</button>
+                                <button type="button" class="question-status-option" data-status-choice="erradas">Errei</button>
+                            </div>
+                        </div>
+                        <div class="question-options-toolbar">
+                            <label class="question-options-search">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg>
+                                <input type="search" data-filter-search="tema" placeholder="Busque por especialidade, assunto ou subassunto…" autocomplete="off">
+                            </label>
+                            <span class="question-options-hint">Selecione para adicionar</span>
+                        </div>
+                        <div id="filter-list-tema" class="question-option-tree" role="tree" aria-label="Especialidades e assuntos"></div>
+                    </div>
+
+                    <div class="question-filter-group" data-filter-group="instituicao" role="tabpanel" hidden>
+                        <div class="question-list-panel-heading"><div><h2>Instituição / banca</h2><p>Escolha uma ou mais instituições para limitar sua busca.</p></div><span class="question-filter-found" id="filter-total-instituicao">—</span></div>
+                        <div class="question-options-toolbar"><label class="question-options-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg><input type="search" data-filter-search="instituicao" placeholder="Busque por uma instituição…" autocomplete="off"></label><span class="question-options-hint">Marque as opções desejadas</span></div>
+                        <div id="filter-list-instituicao" class="question-option-list"></div>
+                        <p class="question-filter-help" data-metadata-help="instituicao">Opções com base nos metadados das questões.</p>
+                    </div>
+                    <div class="question-filter-group" data-filter-group="ano" role="tabpanel" hidden>
+                        <div class="question-list-panel-heading"><div><h2>Ano da prova</h2><p>Selecione os anos que deseja incluir no resultado.</p></div><span class="question-filter-found" id="filter-total-ano">—</span></div>
+                        <div class="question-options-toolbar"><label class="question-options-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg><input type="search" data-filter-search="ano" placeholder="Busque por um ano…" autocomplete="off"></label><span class="question-options-hint">Marque as opções desejadas</span></div>
+                        <div id="filter-list-ano" class="question-option-list"></div>
+                        <p class="question-filter-help" data-metadata-help="ano">Opções com base nos metadados das questões.</p>
+                    </div>
+                    <div class="question-filter-group" data-filter-group="regiao" role="tabpanel" hidden>
+                        <div class="question-list-panel-heading"><div><h2>Região</h2><p>Filtre por região, estado ou localidade registrada na prova.</p></div><span class="question-filter-found" id="filter-total-regiao">—</span></div>
+                        <div class="question-options-toolbar"><label class="question-options-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg><input type="search" data-filter-search="regiao" placeholder="Busque por região ou estado…" autocomplete="off"></label><span class="question-options-hint">Marque as opções desejadas</span></div>
+                        <div id="filter-list-regiao" class="question-option-list"></div>
+                        <p class="question-filter-help" data-metadata-help="regiao">Opções com base nos metadados das questões.</p>
+                    </div>
+                    <div class="question-filter-group" data-filter-group="finalidade" role="tabpanel" hidden>
+                        <div class="question-list-panel-heading"><div><h2>Finalidade da prova</h2><p>Escolha os tipos de processo seletivo ou finalidade.</p></div><span class="question-filter-found" id="filter-total-finalidade">—</span></div>
+                        <div class="question-options-toolbar"><label class="question-options-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg><input type="search" data-filter-search="finalidade" placeholder="Busque por uma finalidade…" autocomplete="off"></label><span class="question-options-hint">Marque as opções desejadas</span></div>
+                        <div id="filter-list-finalidade" class="question-option-list"></div>
+                        <p class="question-filter-help" data-metadata-help="finalidade">Opções com base nos metadados das questões.</p>
+                    </div>
+                    <div class="question-filter-group" data-filter-group="professor" role="tabpanel" hidden>
+                        <div class="question-list-panel-heading"><div><h2>Professor / responsável pela resolução</h2><p>Encontre questões associadas a um responsável pela solução.</p></div><span class="question-filter-found" id="filter-total-professor">—</span></div>
+                        <div class="question-options-toolbar"><label class="question-options-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg><input type="search" data-filter-search="professor" placeholder="Busque por um professor…" autocomplete="off"></label><span class="question-options-hint">Marque as opções desejadas</span></div>
+                        <div id="filter-list-professor" class="question-option-list"></div>
+                        <p class="question-filter-help" data-metadata-help="professor">Opções com base nos metadados das questões.</p>
+                    </div>
+
+                    <div class="question-filter-group" data-filter-group="avancados" role="tabpanel" hidden>
+                        <div class="question-list-panel-heading"><div><h2>Filtros avançados</h2><p>Refine a busca por formato, solução e vigência.</p></div><span class="question-filter-found">Personalize</span></div>
+                        <section class="question-advanced-section">
+                            <h3>Tipo de questão</h3>
+                            <div class="question-advanced-checks">
+                                <label><input type="checkbox" name="f-tipo" value="multipla_escolha"><span>Múltipla escolha</span></label>
+                                <label><input type="checkbox" name="f-tipo" value="certo_errado"><span>Certo / Errado</span></label>
+                                <label><input type="checkbox" name="f-tipo" value="discursiva"><span>Discursiva</span></label>
+                            </div>
+                        </section>
+                        <section class="question-advanced-section">
+                            <h3>Solução em texto</h3>
+                            <div class="question-toggle-grid">
+                                <label class="question-toggle-card"><input type="checkbox" data-advanced-select="f-solucao-texto" data-advanced-value="com" data-advanced-group="solucao"><span class="question-toggle-switch"></span><span class="question-toggle-copy"><strong>Com solução em texto</strong><small>Exibir questões com comentário ou resolução.</small></span></label>
+                                <label class="question-toggle-card"><input type="checkbox" data-advanced-select="f-solucao-texto" data-advanced-value="sem" data-advanced-group="solucao"><span class="question-toggle-switch"></span><span class="question-toggle-copy"><strong>Sem solução em texto</strong><small>Encontrar questões sem comentário registrado.</small></span></label>
+                            </div>
+                        </section>
+                        <section class="question-advanced-section">
+                            <h3>Solução em vídeo</h3>
+                            <div class="question-toggle-grid">
+                                <label class="question-toggle-card"><input type="checkbox" data-advanced-select="f-video" data-advanced-value="com" data-advanced-group="video"><span class="question-toggle-switch"></span><span class="question-toggle-copy"><strong>Com solução por vídeo</strong><small>Incluir questões com vídeo disponível.</small></span></label>
+                                <label class="question-toggle-card"><input type="checkbox" data-advanced-select="f-video" data-advanced-value="sem" data-advanced-group="video"><span class="question-toggle-switch"></span><span class="question-toggle-copy"><strong>Sem solução por vídeo</strong><small>Incluir questões sem vídeo disponível.</small></span></label>
+                            </div>
+                        </section>
+                        <section class="question-advanced-section">
+                            <h3>Vigência da questão</h3>
+                            <div class="question-toggle-grid">
+                                <label class="question-toggle-card"><input type="checkbox" data-advanced-select="f-vigencia" data-advanced-value="validas" data-advanced-group="vigencia"><span class="question-toggle-switch"></span><span class="question-toggle-copy"><strong>Gabarito válido</strong><small>Somente questões com gabarito de A a E.</small></span></label>
+                                <label class="question-toggle-card"><input type="checkbox" data-advanced-select="f-vigencia" data-advanced-value="anuladas" data-advanced-group="vigencia"><span class="question-toggle-switch"></span><span class="question-toggle-copy"><strong>Questões anuladas</strong><small>Sem gabarito de A a E.</small></span></label>
+                                <label class="question-toggle-card"><input type="checkbox" data-advanced-select="f-vigencia" data-advanced-value="desatualizadas" data-advanced-group="vigencia"><span class="question-toggle-switch"></span><span class="question-toggle-copy"><strong>Questões desatualizadas</strong><small>Quando a base identifica essa condição.</small></span></label>
+                            </div>
+                        </section>
+                        <p class="question-filter-help" id="advanced-filter-help">Alguns critérios dependem dos metadados disponíveis em cada questão.</p>
+                    </div>
+                </section>
+
+                <aside class="question-filter-summary" aria-live="polite">
+                    <div class="question-summary-result">
+                        <span>RESULTADO DA BUSCA</span>
+                        <div class="question-summary-total"><strong id="questoes-count">—</strong><span>questões encontradas</span></div>
+                    </div>
+                    <div class="question-summary-heading">
+                        <div><span class="question-filter-label">SUA SELEÇÃO</span><h2>Incluir questões</h2></div>
+                        <button type="button" class="question-summary-edit" id="question-summary-edit" aria-label="Ativar edição dos critérios" aria-pressed="false" title="Destacar critérios selecionados">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5"></path><path d="m4 20 4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11z"></path></svg>
+                        </button>
+                    </div>
+                    <div id="question-filter-summary-chips" class="question-filter-chips"><span class="question-summary-empty">Ajuste os filtros para personalizar o resultado.</span></div>
+                    <div class="question-summary-footnote"><span class="question-summary-footnote-dot"></span><span>Remova qualquer critério clicando no × da etiqueta.</span></div>
+                    <div class="question-summary-bottom"><span>Os resultados são atualizados conforme sua seleção.</span></div>
+                </aside>
             </div>
 
-            
-            <!-- Barra de Botões Aprimorada (Corrigida para Mobile) -->
-            <div class="flex flex-col md:flex-row gap-3 items-center justify-between border-t border-gray-100 pt-5">
-                <div class="flex items-center gap-2 md:gap-3 w-full md:w-auto">
-                    
-                    <select id="limite-pagina" class="w-20 md:w-24 px-2 bg-gray-50 border border-gray-200 rounded-xl outline-none text-xs md:text-sm font-bold text-gray-700 h-12 shrink-0">
-                        <option value="20">20/pág</option><option value="50">50/pág</option><option value="100">100/pág</option>
-                    </select>
-                    
-                    <!-- Botão BUSCAR: Flex e centralizado perfeitamente, sem pular linha -->
-                    <button onclick="aplicarFiltros(1)" class="flex-1 md:flex-none px-2 md:px-6 h-12 flex items-center justify-center bg-green-600 text-white font-black rounded-xl hover:bg-green-700 transition shadow-sm text-[11px] md:text-base tracking-wide whitespace-nowrap">
-                        BUSCAR QUESTÕES
-                    </button>
-                    
-                    <!-- Botão Salvar Caderno: Ícone fixo no mobile -->
-                    <button onclick="abrirModalCaderno()" class="w-12 h-12 md:w-auto md:px-5 flex items-center justify-center bg-yellow-100 text-yellow-800 hover:bg-yellow-200 rounded-xl font-bold transition shadow-sm border border-yellow-200 shrink-0" title="Criar um Caderno com este Filtro">
-                        <svg class="w-5 h-5 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm1 2h10v4H5V5zm8 4H7V6h6v3z"></path></svg>
-                        <span class="hidden md:inline ml-2">Salvar Caderno</span>
-                    </button>
-                </div>
-                
-                <button onclick="gerarPDF()" class="text-gray-500 hover:text-red-500 flex items-center gap-1 font-bold text-sm transition h-12 px-2 w-full md:w-auto justify-center">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Exportar PDF
-                </button>
+            <div class="question-filter-source-fields" aria-hidden="true">
+                <select id="f-status" class="question-filter-source"><option value="todas">Todas</option><option value="ineditas">Não resolvidas</option><option value="feitas">Já resolvidas</option><option value="erradas">Questões que errei</option></select>
+                <select id="f-mat" multiple class="question-filter-source"></select>
+                <select id="f-ass" multiple class="question-filter-source"></select>
+                <select id="f-sub" multiple class="question-filter-source"></select>
+                <select id="f-inst" multiple class="question-filter-source"></select>
+                <select id="f-ano" multiple class="question-filter-source"></select>
+                <select id="f-regiao" multiple class="question-filter-source"></select>
+                <select id="f-finalidade" multiple class="question-filter-source"></select>
+                <select id="f-professor" multiple class="question-filter-source"></select>
+                <select id="f-solucao-texto" class="question-filter-source"><option value="">Todas</option><option value="com">Com solução em texto</option><option value="sem">Sem solução em texto</option></select>
+                <select id="f-video" class="question-filter-source"><option value="">Todas</option><option value="com">Com solução por vídeo</option><option value="sem">Sem solução por vídeo</option></select>
+                <select id="f-vigencia" class="question-filter-source"><option value="">Todas</option><option value="validas">Gabarito válido</option><option value="anuladas">Questões anuladas</option><option value="desatualizadas">Questões desatualizadas</option></select>
             </div>
-            
-            <section class="question-recent-filters">
-                <div class="question-recent-filters-heading">
-                    <h3>Filtros recentes</h3>
-                    <span>Selecione para repetir</span>
-                </div>
-                <div class="question-recent-filter-list" id="historico-container"></div>
-                <div class="question-recent-filter-list" id="historico-container-mobile"></div>
-            </section>
-        </div>
 
-        <div class="question-primary-actions"><button type="button" class="question-action-secondary" onclick="abrirModalLista()">Criar lista</button><button type="button" class="question-action-secondary" onclick="abrirModalSimulado()">Criar simulado</button><button type="button" class="question-action-primary" onclick="aplicarFiltros(1)">Ver questões →</button></div>
+            <details class="question-recent-filter-details">
+                <summary><span>Filtros recentes</span><small>Selecione para repetir uma busca anterior</small></summary>
+                <section class="question-recent-filters">
+                    <div class="question-recent-filter-list" id="historico-container"></div>
+                    <div class="question-recent-filter-list" id="historico-container-mobile"></div>
+                </section>
+            </details>
+        </section>
+
+        <div id="aviso-aleatorio" class="question-random-note hidden"><strong>Explore o banco inteiro.</strong> Selecione filtros acima para personalizar sua próxima sessão.</div>
+        <footer class="question-filter-actionbar" aria-label="Ações dos filtros">
+            <button type="button" class="question-action-reset" onclick="redefinirFiltrosQuestao()"><span aria-hidden="true">↶</span> Redefinir filtros</button>
+            <div class="question-filter-actions">
+                <button type="button" class="question-action-create" onclick="abrirModalLista()">Criar lista</button>
+                <button type="button" class="question-action-create" onclick="abrirModalSimulado()">Criar simulado</button>
+                <button type="button" class="question-action-primary question-action-see" onclick="aplicarFiltros(1)">Ver questões <span aria-hidden="true">→</span></button>
+            </div>
+        </footer>
         <div id="questoes-container"></div>
         <div id="paginacao-container" class="flex flex-wrap justify-center gap-2 mt-6 mb-8"></div>
     </div>
 
+    <div class="question-filter-source-fields" aria-hidden="true">
+        <select id="f-status" class="question-filter-source"><option value="todas">Todas</option><option value="ineditas">Não resolvidas</option><option value="feitas">Já resolvidas</option><option value="erradas">Questões que errei</option></select>
+        <select id="f-mat" multiple class="question-filter-source"></select>
+        <select id="f-ass" multiple class="question-filter-source"></select>
+        <select id="f-sub" multiple class="question-filter-source"></select>
+        <select id="f-inst" multiple class="question-filter-source"></select>
+        <select id="f-ano" multiple class="question-filter-source"></select>
+        <select id="f-regiao" multiple class="question-filter-source"></select>
+        <select id="f-finalidade" multiple class="question-filter-source"></select>
+        <select id="f-professor" multiple class="question-filter-source"></select>
+        <select id="f-solucao-texto" class="question-filter-source"><option value="">Todas</option><option value="com">Com solução em texto</option><option value="sem">Sem solução em texto</option></select>
+        <select id="f-video" class="question-filter-source"><option value="">Todas</option><option value="com">Com solução por vídeo</option><option value="sem">Sem solução por vídeo</option></select>
+        <select id="f-vigencia" class="question-filter-source"><option value="">Todas</option><option value="validas">Gabarito válido</option><option value="anuladas">Questões anuladas</option><option value="desatualizadas">Questões desatualizadas</option></select>
+    </div>
     <!-- Modal Caderno -->
     <div id="modal-caderno" class="fixed inset-0 w-full h-full bg-gray-900/80 z-[999] hidden items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl animate-fade-in-up">
@@ -155,7 +252,7 @@
     <div id="modal-lista" class="resp-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-lista-title"><div class="resp-modal-card"><div class="resp-modal-heading"><div><span class="resp-eyebrow">Nova coleção</span><h3 id="modal-lista-title">Criar lista</h3></div><button type="button" class="resp-icon-button" onclick="fecharModalLista()" aria-label="Fechar">×</button></div><label class="question-filter-field"><span class="question-filter-label">Nome da lista</span><input id="nome-lista" maxlength="100" placeholder="Ex.: Revisão de pediatria"></label><p class="question-filter-help">A lista será criada com as questões correspondentes aos filtros atuais. A coleção original não será alterada.</p><div class="resp-modal-actions"><button class="question-action-secondary" onclick="fecharModalLista()">Cancelar</button><button class="question-action-primary" id="btn-criar-lista" onclick="salvarListaAtual()">Salvar lista</button></div></div></div>
     <div id="modal-simulado" class="resp-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-simulado-title"><div class="resp-modal-card"><div class="resp-modal-heading"><div><span class="resp-eyebrow">Prova personalizada</span><h3 id="modal-simulado-title">Criar novo simulado</h3></div><button type="button" class="resp-icon-button" onclick="fecharModalSimulado()" aria-label="Fechar">×</button></div><label class="question-filter-field"><span class="question-filter-label">Nome do simulado</span><input id="nome-simulado" maxlength="100" placeholder="Ex.: ENARE 2026"></label><div class="question-filter-advanced-grid"><label class="question-filter-field"><span class="question-filter-label">Horas</span><input id="tempo-simulado-h" type="number" min="0" max="24" value="3"></label><label class="question-filter-field"><span class="question-filter-label">Minutos</span><input id="tempo-simulado-m" type="number" min="0" max="59" value="45"></label></div><label class="question-filter-field"><span class="question-filter-label">Quantidade de questões</span><input id="qtd-simulado" type="number" min="1" max="1000" value="100"></label><p class="question-filter-help">O simulado usa os filtros atuais e salva a duração em minutos.</p><div class="resp-modal-actions"><button class="question-action-secondary" onclick="fecharModalSimulado()">Cancelar</button><button class="question-action-primary" id="btn-criar-simulado" onclick="salvarSimuladoAtual()">Criar simulado</button></div></div></div>
 
-    <script src="/static/app.js?v=20261017-6"></script>
+    <script src="/static/app.js?v=20261017-7"></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             if(localStorage.getItem('hideTemas') === 'true') {

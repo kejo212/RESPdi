@@ -256,15 +256,22 @@ def _metadados_saida(questao):
 @app.route('/api/questao-filtros', methods=['GET'])
 def obter_opcoes_filtros_questoes():
     opcoes={campo:set() for campo in ["instituicao","ano","regiao","finalidade","professor"]}
+    contagens={campo:{} for campo in ["instituicao","ano","regiao","finalidade","professor"]}
     tem_video=False
     tem_vigencia=False
     for questao in banco_questoes:
         for campo in opcoes:
             valor=_valor_metadado(questao,campo)
-            if valor: opcoes[campo].add(valor)
+            if valor:
+                opcoes[campo].add(valor)
+                contagens[campo][valor]=contagens[campo].get(valor,0)+1
         tem_video=tem_video or bool(_valor_metadado(questao,"video"))
         tem_vigencia=tem_vigencia or bool(_valor_metadado(questao,"vigencia"))
-    return jsonify({"opcoes":{campo:sorted(list(valores),key=lambda x:x.casefold())[:500] for campo,valores in opcoes.items()},"disponibilidade":{"video":tem_video,"vigencia":tem_vigencia,**{campo:bool(valores) for campo,valores in opcoes.items()}}})
+    return jsonify({
+        "opcoes":{campo:sorted(list(valores),key=lambda x:x.casefold())[:500] for campo,valores in opcoes.items()},
+        "contagens":contagens,
+        "disponibilidade":{"video":tem_video,"vigencia":tem_vigencia,**{campo:bool(valores) for campo,valores in opcoes.items()}}
+    })
 
 @app.route('/api/questoes', methods=['POST'])
 def obter_questoes():
