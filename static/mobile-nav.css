@@ -141,24 +141,25 @@
 @keyframes resp-mobile-menu-rise { from {opacity:0;transform:translateY(10px)} to {opacity:1;transform:translateY(0)} }
 
 
-/* Garante que os ícones e rótulos exclusivos do mobile nunca apareçam no desktop. */
+/* Separa o conjunto exclusivo do desktop/mobile e respeita a expansão da sidebar. */
 @media (min-width: 768px) {
   .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-icon-mobile,
   .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-label-mobile {
     display: none !important;
   }
+
   .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-icon-desktop {
     display: inline-flex !important;
-  
-  /* O rótulo desktop de Questões não é o último filho (há um rótulo mobile separado). */
+  }
+
   .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-label-desktop {
     display: none !important;
     opacity: 0;
   }
+
   .resp-sidebar:hover .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-label-desktop,
   .resp-sidebar:focus-within .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-label-desktop {
     display: block !important;
     opacity: 1;
   }
-}
 }
