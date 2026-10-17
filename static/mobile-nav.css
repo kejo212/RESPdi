@@ -349,6 +349,48 @@
   }
 }
 
+/* Ícones ancorados: expandir a barra revela os textos sem mover os ícones. */
+@media (min-width: 768px) {
+  .resp-sidebar .resp-nav-link {
+    position: relative !important;
+    justify-content: flex-start !important;
+    padding: 0 0 0 45px !important;
+  }
+  .resp-sidebar:hover .resp-nav-link,
+  .resp-sidebar:focus-within .resp-nav-link {
+    padding: 0 11px 0 45px !important;
+  }
+  .resp-sidebar .resp-nav-link > .resp-nav-icon {
+    position: absolute !important;
+    left: 15px !important;
+    top: 50% !important;
+    margin-left: 0 !important;
+    transform: translateY(-50%) !important;
+    flex: 0 0 22px !important;
+  }
+
+  /* A marca no topo segue a mesma lógica: logo fixo, nome revelado ao lado. */
+  .resp-sidebar .resp-brand {
+    position: relative !important;
+    box-sizing: border-box !important;
+    padding: 0 0 0 50px !important;
+    justify-content: flex-start !important;
+  }
+  .resp-sidebar:hover .resp-brand,
+  .resp-sidebar:focus-within .resp-brand {
+    padding: 0 12px 0 50px !important;
+  }
+  .resp-sidebar .resp-brand img {
+    position: absolute !important;
+    left: 6px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+  }
+  .resp-sidebar .resp-brand-wordmark {
+    margin-left: 0 !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .resp-sidebar, .resp-sidebar *,
   .resp-sidebar::before, .resp-sidebar::after {
