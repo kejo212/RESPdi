@@ -6,7 +6,7 @@
     <title>RESPdi - Simulado</title>
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/static/theme.css?v=20261017-5">
+    <link rel="stylesheet" href="/static/theme.css?v=20261017-6">
     <style>
         .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -120,12 +120,14 @@
                 </button>
             </div>
             
-            <!-- Histórico Otimizado -->
-            <div class="mt-4 border-t border-gray-100 pt-4 hidden md:block">
-                <p class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Filtros Recentes</p>
-                <div class="flex flex-wrap items-center gap-2" id="historico-container"></div>
-            </div>
-            <div class="mt-4 flex flex-wrap md:hidden items-center gap-2" id="historico-container-mobile"></div>
+            <section class="question-recent-filters">
+                <div class="question-recent-filters-heading">
+                    <h3>Filtros recentes</h3>
+                    <span>Selecione para repetir</span>
+                </div>
+                <div class="question-recent-filter-list" id="historico-container"></div>
+                <div class="question-recent-filter-list" id="historico-container-mobile"></div>
+            </section>
         </div>
 
         <div class="question-primary-actions"><button type="button" class="question-action-secondary" onclick="abrirModalLista()">Criar lista</button><button type="button" class="question-action-secondary" onclick="abrirModalSimulado()">Criar simulado</button><button type="button" class="question-action-primary" onclick="aplicarFiltros(1)">Ver questões →</button></div>

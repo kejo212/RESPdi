@@ -188,24 +188,61 @@ async function aplicarFiltros(pagina = 1) {
     } catch(e) {}
 }
 
+function resumoVisualFiltroRecente(config = {}) {
+    const lista = valor => Array.isArray(valor) ? valor.filter(Boolean).map(String) : (valor ? [String(valor)] : []);
+    const materias = lista(config.materia);
+    const assuntos = lista(config.assunto);
+    const subassuntos = lista(config.subassunto);
+    const palavra = String(config.palavraChave || '').trim();
+    const statusLabels = { ineditas: 'Questões inéditas', feitas: 'Questões já feitas', erradas: 'Questões erradas' };
+    const status = statusLabels[config.statusProgresso] || '';
+
+    const titulo = assuntos.length ? assuntos.join(', ')
+        : materias.length ? materias.join(', ')
+        : palavra ? palavra
+        : status || 'Questões filtradas';
+
+    const detalhes = [];
+    if (assuntos.length && materias.length) detalhes.push(materias.join(', '));
+    if (subassuntos.length) detalhes.push(subassuntos.length === 1 ? subassuntos[0] : subassuntos.length + ' subassuntos');
+    if (palavra && titulo !== palavra) detalhes.push('Busca: ' + palavra);
+    if (status && titulo !== status) detalhes.push(status.replace(/^Questões /, ''));
+    return { titulo, detalhe: detalhes.slice(0, 2).join(' · ') };
+}
+
 function registrarHistoricoFiltro(f) {
-    let stat = "";
-    if(f.statusProgresso === 'ineditas') stat = " [Inéditas]";
-    if(f.statusProgresso === 'feitas') stat = " [Já Feitas]";
-    if(f.statusProgresso === 'erradas') stat = " [Erradas]";
-    
-    const rotulo = (f.palavraChave ? `"${f.palavraChave}"` : '') + stat + (f.materia.length ? ` [${f.materia.length} Matérias]` : '');
-    if(!rotulo.trim()) return;
-    if(historicoUsuario.length > 0 && historicoUsuario[0].rotulo === rotulo) return;
-    historicoUsuario.unshift({ rotulo: rotulo, config: f });
-    if(historicoUsuario.length > 8) historicoUsuario.pop();
-    syncDB('historico', historicoUsuario); renderizarHistoricoFiltros();
+    const resumo = resumoVisualFiltroRecente(f);
+    if (!resumo.titulo.trim()) return;
+    const assinatura = JSON.stringify([resumo.titulo, resumo.detalhe]);
+    const resumoAnterior = historicoUsuario.length ? resumoVisualFiltroRecente(historicoUsuario[0].config || {}) : null;
+    if (resumoAnterior && JSON.stringify([resumoAnterior.titulo, resumoAnterior.detalhe]) === assinatura) return;
+
+    historicoUsuario = [
+        { rotulo: resumo.titulo, config: f },
+        ...historicoUsuario.filter(item => {
+            const existente = resumoVisualFiltroRecente(item.config || {});
+            return JSON.stringify([existente.titulo, existente.detalhe]) !== assinatura;
+        })
+    ].slice(0, 8);
+    syncDB('historico', historicoUsuario);
+    renderizarHistoricoFiltros();
 }
 
 function renderizarHistoricoFiltros() {
-    const ctr1 = document.getElementById('historico-container'); const ctr2 = document.getElementById('historico-container-mobile');
-    const html = historicoUsuario.length === 0 ? '<span class="text-xs text-gray-400">Nenhum histórico recente</span>' : historicoUsuario.map((h, i) => `<button onclick="aplicarHistorico(${i})" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-full border border-gray-200 transition shadow-sm font-medium" title="${h.rotulo}">⏰ ${h.rotulo}</button>`).join('');
-    if(ctr1) ctr1.innerHTML = html; if(ctr2) ctr2.innerHTML = html;
+    const ctr1 = document.getElementById('historico-container');
+    const ctr2 = document.getElementById('historico-container-mobile');
+    const vazio = '<p class="question-recent-filter-empty">Nenhum filtro recente</p>';
+    const html = historicoUsuario.length === 0 ? vazio : historicoUsuario.map((h, i) => {
+        const resumo = resumoVisualFiltroRecente(h.config || {});
+        const titulo = textoSeguro(resumo.titulo);
+        const detalhe = textoSeguro(resumo.detalhe);
+        return '<button type="button" onclick="aplicarHistorico(' + i + ')" class="question-recent-filter" title="' + titulo + '" aria-label="Reaplicar filtros: ' + titulo + '">' +
+            '<span class="question-recent-filter-title">' + titulo + '</span>' +
+            (detalhe ? '<span class="question-recent-filter-detail">' + detalhe + '</span>' : '') +
+            '</button>';
+    }).join('');
+    if (ctr1) ctr1.innerHTML = html;
+    if (ctr2) ctr2.innerHTML = html;
 }
 
 function aplicarHistorico(index) {

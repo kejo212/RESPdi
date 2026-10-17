@@ -477,3 +477,24 @@ body.page-dashboard, body.page-questions, body.page-notebooks, body.page-profile
   .resp-sidebar .resp-nav-link .resp-nav-icon { flex-basis: 20px !important; width: 20px !important; height: 20px !important; }
   .resp-sidebar .resp-nav-link .resp-nav-icon svg { width: 20px !important; height: 20px !important; min-width: 20px; flex-basis: 20px; }
 }
+
+
+/* Filtros recentes: títulos claros, metadados discretos e sem elementos decorativos. */
+.question-recent-filters { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e8eeee; }
+.question-recent-filters-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+.question-recent-filters-heading h3 { margin: 0; color: #3c535a; font-size: 12px; line-height: 1.4; font-weight: 750; letter-spacing: -.01em; }
+.question-recent-filters-heading > span { color: #9aa7ac; font-size: 10px; line-height: 1.4; }
+.question-recent-filter-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); align-items: stretch; gap: 8px; }
+#historico-container-mobile { display: none !important; }
+.question-recent-filter { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; min-width: 0; min-height: 54px; padding: 9px 11px; border: 1px solid #e6eded; border-radius: 9px; background: #fff; text-align: left; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.question-recent-filter:hover, .question-recent-filter:focus-visible { background: #f7fbfa; border-color: #c7e4e1; }
+.question-recent-filter-title { display: block; width: 100%; overflow: hidden; color: #385159; font-size: 11px; line-height: 1.45; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.question-recent-filter-detail { display: block; width: 100%; margin-top: 3px; overflow: hidden; color: #8a999f; font-size: 9px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.question-recent-filter-empty { grid-column: 1 / -1; margin: 0; padding: 7px 0; color: #9aa7ac; font-size: 11px; }
+@media (max-width: 767px) {
+  .question-recent-filters { margin-top: 16px; padding-top: 13px; }
+  #historico-container { display: none !important; }
+  #historico-container-mobile { display: grid !important; }
+  .question-recent-filter-list { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .question-recent-filter { min-height: 48px; }
+}
