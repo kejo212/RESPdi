@@ -1080,3 +1080,58 @@ body.page-dashboard, body.page-questions, body.page-notebooks, body.page-profile
   .resp-drive-viewer-link { max-width: 90px; text-align: center; }
   .resp-drive-media-frame { min-height: 240px; }
 }
+
+
+/* Ajuste mobile: a busca principal ocupa a largura disponível sem deslocamento
+   do campo interno, mantendo o mesmo fundo suave do contêiner. */
+@media (max-width: 767px) {
+  .question-builder-toolbar {
+    display: block !important;
+    padding: 12px !important;
+  }
+  .question-search-box {
+    box-sizing: border-box !important;
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 52px !important;
+    margin: 0 !important;
+    padding: 0 12px !important;
+    gap: 10px !important;
+    background: #fbfdfd !important;
+    border: 1px solid #e1eaea !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+  }
+  .question-search-box input {
+    box-sizing: border-box !important;
+    display: block !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    flex: 1 1 0% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: #344c53 !important;
+    font-size: 13px !important;
+    line-height: normal !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .question-search-box input::placeholder {
+    color: #9aa9ad !important;
+    opacity: 1;
+  }
+  .question-search-box > span {
+    flex: 0 0 auto !important;
+    padding-left: 10px !important;
+  }
+  .question-toolbar-tools {
+    margin-top: 10px !important;
+  }
+}
