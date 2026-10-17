@@ -951,33 +951,272 @@ function alternarTarefaAgenda(id,checked){const task=agendaUsuario.find(t=>Strin
 function removerTarefaAgenda(id){agendaUsuario=agendaUsuario.filter(t=>String(t.id)!==String(id));syncDB('agenda',agendaUsuario);renderizarAgendaDashboard();mostrarToast('Tarefa removida.');}
 
 
-// Biblioteca Google Drive: a busca abre a interface oficial com o filtro aplicado à pasta compartilhada.
+// Biblioteca de mídia do Google Drive: navegação e visualização sem operações de escrita.
 const RESP_ACERVO_DRIVE_ID = "13tBBSrXMsu2NGW0jCSvrzIE9epV-Bw47";
 const RESP_ACERVO_DRIVE_URL = "https://drive.google.com/drive/folders/" + RESP_ACERVO_DRIVE_ID;
-function abrirAcervoDrive() {
-    window.open(RESP_ACERVO_DRIVE_URL, "_blank", "noopener,noreferrer");
+const respDriveState = {
+    stack: [{ id: RESP_ACERVO_DRIVE_ID, name: "Biblioteca" }],
+    files: [],
+    filter: "all",
+    search: "",
+    pageToken: "",
+    loading: false,
+    loaded: false
+};
+
+function driveEscapar(valor) {
+    return String(valor == null ? "" : valor).replace(/[&<>"']/g, function (caractere) {
+        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[caractere];
+    });
+}
+function driveTipo(arquivo) {
+    const mime = String(arquivo.mimeType || "").toLowerCase();
+    if (mime === "application/vnd.google-apps.folder") return "folder";
+    if (mime === "application/pdf" || /\.pdf$/i.test(arquivo.name || "")) return "pdf";
+    if (mime.indexOf("image/") === 0) return "image";
+    if (mime.indexOf("video/") === 0) return "video";
+    return "other";
+}
+function driveTamanho(valor) {
+    const bytes = Number(valor || 0);
+    if (!bytes) return "";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " KB";
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " MB";
+    return (bytes / (1024 * 1024 * 1024)).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " GB";
+}
+function driveUrlVisualizacao(arquivo, tipo) {
+    const id = encodeURIComponent(arquivo.id);
+    const chave = arquivo.resourceKey ? "&resourcekey=" + encodeURIComponent(arquivo.resourceKey) : "";
+    if (tipo === "image") return "https://drive.google.com/uc?export=view&id=" + id + chave;
+    return "https://drive.google.com/file/d/" + id + "/preview" +
+        (arquivo.resourceKey ? "?resourcekey=" + encodeURIComponent(arquivo.resourceKey) : "");
+}
+function driveAtualizarStatus(mensagem, estado) {
+    const status = document.getElementById("drive-status");
+    if (!status) return;
+    status.textContent = mensagem;
+    status.classList.toggle("is-error", estado === "error");
+    status.classList.toggle("is-loading", estado === "loading");
+}
+function driveRenderizarBreadcrumbs() {
+    const container = document.getElementById("drive-breadcrumbs");
+    if (!container) return;
+    container.innerHTML = respDriveState.stack.map(function (pasta, indice) {
+        const atual = indice === respDriveState.stack.length - 1;
+        return (indice ? '<span class="resp-drive-crumb-separator" aria-hidden="true">/</span>' : "") +
+            '<button type="button" class="resp-drive-crumb' + (atual ? ' is-current' : '') +
+            '" data-drive-crumb="' + indice + '"' + (atual ? ' aria-current="page"' : '') + '>' +
+            driveEscapar(pasta.name) + '</button>';
+    }).join("");
+}
+function driveRenderizarArquivos() {
+    const grid = document.getElementById("drive-grid");
+    const contador = document.getElementById("drive-count");
+    const carregarMais = document.getElementById("drive-load-more");
+    if (!grid) return;
+    const termo = respDriveState.search.toLocaleLowerCase("pt-BR");
+    const filtrados = respDriveState.files.filter(function (arquivo) {
+        const tipo = driveTipo(arquivo);
+        const correspondeTipo = respDriveState.filter === "all" || tipo === respDriveState.filter;
+        const correspondeTexto = !termo || String(arquivo.name || "").toLocaleLowerCase("pt-BR").includes(termo);
+        return correspondeTipo && correspondeTexto;
+    });
+    if (contador) contador.textContent = filtrados.length.toLocaleString("pt-BR") +
+        (filtrados.length === 1 ? " item" : " itens") +
+        (respDriveState.search ? " nesta busca" : "");
+    if (!filtrados.length) {
+        grid.innerHTML = '<div class="resp-drive-empty"><span class="resp-drive-empty-icon">⌕</span><strong>Nenhum material encontrado</strong><p>Tente outro termo ou escolha um filtro diferente.</p></div>';
+    } else {
+        grid.innerHTML = filtrados.map(function (arquivo) {
+            const tipo = driveTipo(arquivo);
+            const pasta = tipo === "folder";
+            const rotulos = { folder: "Pasta", pdf: "PDF", image: "Imagem", video: "Vídeo", other: "Arquivo" };
+            const icones = { folder: "▰", pdf: "PDF", image: "▧", video: "▶", other: "▤" };
+            const tamanho = driveTamanho(arquivo.size);
+            const data = arquivo.modifiedTime ? new Date(arquivo.modifiedTime).toLocaleDateString("pt-BR") : "";
+            let miniatura = '<span class="resp-drive-file-icon resp-drive-icon-' + tipo + '">' + icones[tipo] + '</span>';
+            if (tipo === "image" && arquivo.thumbnailLink) {
+                miniatura = '<img class="resp-drive-thumbnail" src="' + driveEscapar(arquivo.thumbnailLink) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">';
+            }
+            return '<button type="button" class="resp-drive-file-card" data-drive-action="' + (pasta ? "folder" : "preview") +
+                '" data-drive-id="' + driveEscapar(arquivo.id) + '" data-drive-name="' + driveEscapar(arquivo.name) +
+                '" data-drive-type="' + tipo + '" aria-label="' + (pasta ? "Abrir pasta " : "Visualizar ") + driveEscapar(arquivo.name) + '">' +
+                '<span class="resp-drive-file-preview">' + miniatura + '</span>' +
+                '<span class="resp-drive-file-copy"><span class="resp-drive-file-type">' + rotulos[tipo] + '</span>' +
+                '<strong title="' + driveEscapar(arquivo.name) + '">' + driveEscapar(arquivo.name) + '</strong>' +
+                '<span class="resp-drive-file-meta">' + [tamanho, data].filter(Boolean).map(driveEscapar).join(" · ") + '</span></span>' +
+                '<span class="resp-drive-file-arrow" aria-hidden="true">' + (pasta ? "›" : "↗") + '</span></button>';
+        }).join("");
+    }
+    if (carregarMais) carregarMais.hidden = !respDriveState.pageToken;
+}
+async function carregarAcervoDrive(opcoes) {
+    const opts = opcoes || {};
+    if (respDriveState.loading) return;
+    const pasta = respDriveState.stack[respDriveState.stack.length - 1];
+    const grid = document.getElementById("drive-grid");
+    respDriveState.loading = true;
+    const botaoAtualizar = document.getElementById("drive-refresh");
+    if (botaoAtualizar) botaoAtualizar.disabled = true;
+    driveAtualizarStatus("Conectando ao acervo…", "loading");
+    if (!opts.append && grid) grid.innerHTML = '<div class="resp-drive-empty resp-drive-empty-loading"><span class="resp-drive-loader"></span><strong>Carregando materiais</strong><p>Estamos buscando os arquivos desta pasta.</p></div>';
+    try {
+        const parametros = new URLSearchParams({ parentId: pasta.id });
+        if (opts.append && respDriveState.pageToken) parametros.set("pageToken", respDriveState.pageToken);
+        const resposta = await fetch("/api/materiais/drive?" + parametros.toString(), { headers: { "Accept": "application/json" } });
+        const dados = await resposta.json();
+        if (!resposta.ok) throw new Error(dados.erro || "Não foi possível carregar a biblioteca.");
+        const arquivos = Array.isArray(dados.files) ? dados.files : [];
+        respDriveState.files = opts.append ? respDriveState.files.concat(arquivos) : arquivos;
+        respDriveState.pageToken = dados.nextPageToken || "";
+        respDriveState.loaded = true;
+        driveRenderizarBreadcrumbs();
+        driveRenderizarArquivos();
+        const totalPastas = respDriveState.files.filter(function (item) { return driveTipo(item) === "folder"; }).length;
+        const totalMidias = respDriveState.files.length - totalPastas;
+        driveAtualizarStatus(totalPastas + " pastas · " + totalMidias + " arquivos nesta pasta", "");
+    } catch (erro) {
+        if (grid) grid.innerHTML = '<div class="resp-drive-empty resp-drive-empty-error"><span class="resp-drive-empty-icon">!</span><strong>Não foi possível carregar o acervo</strong><p>' +
+            driveEscapar(erro.message || "Verifique sua conexão e tente novamente.") + '</p><small>Se for a primeira configuração, o administrador precisa definir a chave de API do Google Drive no servidor.</small></div>';
+        driveAtualizarStatus("Acervo indisponível", "error");
+        const count = document.getElementById("drive-count");
+        if (count) count.textContent = "Não foi possível carregar";
+    } finally {
+        respDriveState.loading = false;
+        if (botaoAtualizar) botaoAtualizar.disabled = false;
+    }
+}
+function abrirPastaAcervoDrive(id, nome) {
+    if (!id) return;
+    respDriveState.stack.push({ id: id, name: nome || "Pasta" });
+    respDriveState.filter = "all";
+    respDriveState.search = "";
+    respDriveState.pageToken = "";
+    const campo = document.getElementById("drive-search-term");
+    if (campo) campo.value = "";
+    document.querySelectorAll("[data-drive-filter]").forEach(function (botao) {
+        botao.classList.toggle("is-active", botao.dataset.driveFilter === "all");
+    });
+    carregarAcervoDrive();
+}
+function filtrarAcervoDrive(tipo) {
+    respDriveState.filter = tipo || "all";
+    document.querySelectorAll("[data-drive-filter]").forEach(function (botao) {
+        const ativo = botao.dataset.driveFilter === respDriveState.filter;
+        botao.classList.toggle("is-active", ativo);
+        botao.setAttribute("aria-pressed", ativo ? "true" : "false");
+    });
+    driveRenderizarArquivos();
 }
 function pesquisarAcervoDrive(termoRapido) {
     const campo = document.getElementById("drive-search-term");
     const termo = String(typeof termoRapido === "string" ? termoRapido : (campo ? campo.value : "")).trim();
-    if (!termo) {
-        if (campo) campo.focus();
-        mostrarToast("Digite um tema, nome de arquivo ou palavra-chave para pesquisar.");
-        return;
-    }
     if (campo) campo.value = termo;
-    const consulta = "in:" + RESP_ACERVO_DRIVE_ID + " " + termo;
-    const url = "https://drive.google.com/drive/u/0/search?q=" + encodeURIComponent(consulta);
-    window.open(url, "_blank", "noopener,noreferrer");
-    mostrarToast("Pesquisa aberta no Google Drive em uma nova aba.");
+    respDriveState.search = termo;
+    driveRenderizarArquivos();
+    if (termo) mostrarToast("Busca aplicada aos arquivos desta pasta.");
+}
+function atualizarAcervoDrive() {
+    respDriveState.pageToken = "";
+    carregarAcervoDrive();
+}
+function voltarRaizAcervoDrive() {
+    respDriveState.stack = [{ id: RESP_ACERVO_DRIVE_ID, name: "Biblioteca" }];
+    respDriveState.search = "";
+    respDriveState.filter = "all";
+    respDriveState.pageToken = "";
+    const campo = document.getElementById("drive-search-term");
+    if (campo) campo.value = "";
+    filtrarAcervoDrive("all");
+    carregarAcervoDrive();
 }
 async function copiarLinkAcervoDrive() {
     try {
         await navigator.clipboard.writeText(RESP_ACERVO_DRIVE_URL);
-        mostrarToast("Link da biblioteca copiado.");
+        mostrarToast("Link da pasta original copiado.");
     } catch (e) {
-        window.prompt("Copie o link da biblioteca do Google Drive:", RESP_ACERVO_DRIVE_URL);
+        window.prompt("Copie o link da pasta original do Google Drive:", RESP_ACERVO_DRIVE_URL);
     }
+}
+function fecharVisualizadorDrive() {
+    const modal = document.getElementById("drive-viewer");
+    const conteudo = document.getElementById("drive-viewer-content");
+    if (modal) {
+        modal.hidden = true;
+        modal.setAttribute("aria-hidden", "true");
+    }
+    if (conteudo) conteudo.innerHTML = "";
+    document.body.classList.remove("resp-drive-viewer-open");
+}
+function abrirVisualizadorDrive(id, nome, tipo) {
+    const arquivo = respDriveState.files.find(function (item) { return String(item.id) === String(id); });
+    if (!arquivo) return;
+    const modal = document.getElementById("drive-viewer");
+    const titulo = document.getElementById("drive-viewer-title");
+    const conteudo = document.getElementById("drive-viewer-content");
+    const abrirOriginal = document.getElementById("drive-viewer-original");
+    if (!modal || !conteudo) return;
+    if (titulo) titulo.textContent = nome || arquivo.name;
+    if (abrirOriginal) abrirOriginal.href = RESP_ACERVO_DRIVE_URL;
+    if (tipo === "other") {
+        conteudo.innerHTML = '<div class="resp-drive-empty"><span class="resp-drive-empty-icon">▤</span><strong>Pré-visualização não disponível</strong><p>Este formato não está entre os tipos compatíveis com o visualizador. O arquivo original permanece intacto no Google Drive.</p></div>';
+    } else if (tipo === "image") {
+        conteudo.innerHTML = '<div class="resp-drive-image-stage"><img src="' + driveEscapar(driveUrlVisualizacao(arquivo, tipo)) + '" alt="' + driveEscapar(nome || arquivo.name) + '" referrerpolicy="no-referrer"><p>Se a imagem não aparecer, confirme se o arquivo permite visualização pública.</p></div>';
+    } else {
+        conteudo.innerHTML = '<iframe class="resp-drive-media-frame" src="' + driveEscapar(driveUrlVisualizacao(arquivo, tipo)) +
+            '" title="' + driveEscapar(nome || arquivo.name) + '" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="eager" referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+    }
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("resp-drive-viewer-open");
+    const fechar = modal.querySelector("[data-drive-close]");
+    if (fechar) fechar.focus();
+}
+function inicializarBibliotecaDrive() {
+    const grid = document.getElementById("drive-grid");
+    if (!grid) return;
+    grid.addEventListener("click", function (evento) {
+        const botao = evento.target.closest("[data-drive-action]");
+        if (!botao) return;
+        if (botao.dataset.driveAction === "folder") {
+            abrirPastaAcervoDrive(botao.dataset.driveId, botao.dataset.driveName);
+        } else {
+            abrirVisualizadorDrive(botao.dataset.driveId, botao.dataset.driveName, botao.dataset.driveType);
+        }
+    });
+    const breadcrumbs = document.getElementById("drive-breadcrumbs");
+    if (breadcrumbs) breadcrumbs.addEventListener("click", function (evento) {
+        const botao = evento.target.closest("[data-drive-crumb]");
+        if (!botao) return;
+        const indice = Number(botao.dataset.driveCrumb);
+        if (!Number.isInteger(indice) || indice < 0 || indice >= respDriveState.stack.length) return;
+        respDriveState.stack = respDriveState.stack.slice(0, indice + 1);
+        respDriveState.pageToken = "";
+        carregarAcervoDrive();
+    });
+    const campo = document.getElementById("drive-search-term");
+    if (campo) campo.addEventListener("input", function () {
+        respDriveState.search = campo.value.trim();
+        driveRenderizarArquivos();
+    });
+    const botaoMais = document.getElementById("drive-load-more");
+    if (botaoMais) botaoMais.addEventListener("click", function () { carregarAcervoDrive({ append: true }); });
+    const modal = document.getElementById("drive-viewer");
+    if (modal) {
+        modal.addEventListener("click", function (evento) {
+            if (evento.target === modal || evento.target.closest("[data-drive-close]")) fecharVisualizadorDrive();
+        });
+        document.addEventListener("keydown", function (evento) {
+            if (evento.key === "Escape" && !modal.hidden) fecharVisualizadorDrive();
+        });
+    }
+    carregarAcervoDrive();
+}
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", inicializarBibliotecaDrive, { once: true });
+} else {
+    inicializarBibliotecaDrive();
 }
 
 

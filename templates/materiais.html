@@ -3,68 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f4faf9">
     <title>RESPdi — Biblioteca de materiais</title>
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/static/theme.css?v=20261017-8">
+    <link rel="stylesheet" href="/static/theme.css?v=20261017-12">
 </head>
 <body class="page-module page-drive-library">
     {% include 'sidebar.html' %}
     <main class="resp-page resp-drive-page">
-        <div class="resp-page-heading">
-            <div>
-                <span class="resp-eyebrow">Acervo de estudo</span>
+        <section class="resp-drive-hero">
+            <div class="resp-drive-hero-copy">
+                <span class="resp-drive-status">Acervo de estudo</span>
                 <h1>Biblioteca de materiais</h1>
-                <p>Um ponto de entrada para consultar, localizar e abrir os materiais que estão no Google Drive compartilhado.</p>
+                <p>Encontre e visualize PDFs, imagens e vídeos sem sair do RESPdi. Os arquivos permanecem no Google Drive original e esta biblioteca não oferece ferramentas para alterá-los.</p>
             </div>
-            <div class="resp-drive-actions resp-drive-actions-inline">
-                <button type="button" class="question-action-primary" onclick="abrirAcervoDrive()">Abrir Google Drive ↗</button>
-                <button type="button" class="question-action-secondary" onclick="copiarLinkAcervoDrive()">Copiar link</button>
+            <div class="resp-drive-actions">
+                <button id="drive-refresh" type="button" class="question-action-primary" onclick="atualizarAcervoDrive()">↻ Atualizar acervo</button>
+                <button type="button" class="question-action-secondary" onclick="copiarLinkAcervoDrive()">Copiar link original</button>
             </div>
-        </div>
-        <div class="resp-drive-search-layout">
-            <section class="resp-drive-card">
-                <h2>Pesquisar no acervo</h2>
-                <p>Digite um tema, parte do nome do arquivo ou palavra-chave. A pesquisa abre em uma nova aba do Google Drive, filtrada pela pasta da biblioteca.</p>
-                <form class="resp-drive-search-form" onsubmit="event.preventDefault(); pesquisarAcervoDrive();">
-                    <input id="drive-search-term" type="search" maxlength="180" placeholder="Ex.: farmacologia, resumo, aula de clínica..." aria-label="Pesquisar materiais no Google Drive">
-                    <button type="submit" class="question-action-primary">Pesquisar ↗</button>
-                </form>
-                <div class="resp-drive-chips" aria-label="Sugestões de pesquisa">
-                    <button type="button" class="resp-drive-chip" onclick="pesquisarAcervoDrive('resumo')">Resumos</button>
-                    <button type="button" class="resp-drive-chip" onclick="pesquisarAcervoDrive('aula')">Aulas</button>
-                    <button type="button" class="resp-drive-chip" onclick="pesquisarAcervoDrive('livro')">Livros</button>
-                    <button type="button" class="resp-drive-chip" onclick="pesquisarAcervoDrive('questões')">Questões</button>
-                    <button type="button" class="resp-drive-chip" onclick="pesquisarAcervoDrive('prova')">Provas</button>
-                </div>
-            </section>
-            <aside class="resp-drive-card">
-                <h2>Como encontrar mais rápido</h2>
-                <p>Use termos específicos e combine o assunto com o tipo de material para reduzir resultados.</p>
-                <div class="resp-drive-steps">
-                    <div class="resp-drive-step"><b>1</b><span>Pesquise pelo nome da disciplina ou pelo assunto principal.</span></div>
-                    <div class="resp-drive-step"><b>2</b><span>Acrescente palavras como “resumo”, “aula” ou “prova”.</span></div>
-                    <div class="resp-drive-step"><b>3</b><span>Abra a biblioteca completa para navegar em subpastas ou visualizar e baixar o arquivo.</span></div>
-                </div>
-            </aside>
-        </div>
-        <section class="resp-drive-browser">
-            <div class="resp-drive-browser-heading">
+        </section>
+
+        <section class="resp-drive-card resp-drive-search-card" aria-label="Pesquisa de materiais">
+            <div class="resp-drive-search-heading">
                 <div>
-                    <h2>Pré-visualização da biblioteca</h2>
-                    <p>Visualização rápida do acervo. Para pesquisar, abrir um arquivo ou navegar com todas as opções, use a biblioteca completa acima.</p>
+                    <h2>O que você quer estudar?</h2>
+                    <p>Pesquise pelo nome do arquivo dentro da pasta aberta ou filtre por tipo de mídia.</p>
                 </div>
-                <button type="button" class="question-action-secondary" onclick="abrirAcervoDrive()">Navegar no Drive ↗</button>
             </div>
-            <div class="resp-drive-frame-shell">
-                <iframe class="resp-drive-frame" title="Pré-visualização dos materiais compartilhados no Google Drive" loading="lazy" src="https://drive.google.com/embeddedfolderview?id=13tBBSrXMsu2NGW0jCSvrzIE9epV-Bw47#list" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            <form class="resp-drive-search-form" onsubmit="event.preventDefault(); pesquisarAcervoDrive();">
+                <label class="resp-drive-search-input-wrap" for="drive-search-term"><span aria-hidden="true">⌕</span>
+                    <input id="drive-search-term" type="search" maxlength="180" placeholder="Buscar PDF, imagem, vídeo..." autocomplete="off" aria-label="Pesquisar arquivos nesta pasta">
+                </label>
+                <button type="submit" class="question-action-primary">Pesquisar</button>
+            </form>
+            <div class="resp-drive-filter-row" role="group" aria-label="Filtrar materiais por tipo">
+                <button type="button" class="resp-drive-filter is-active" data-drive-filter="all" aria-pressed="true" onclick="filtrarAcervoDrive('all')">Todos</button>
+                <button type="button" class="resp-drive-filter" data-drive-filter="pdf" aria-pressed="false" onclick="filtrarAcervoDrive('pdf')"><span class="resp-drive-filter-icon">PDF</span> PDFs</button>
+                <button type="button" class="resp-drive-filter" data-drive-filter="image" aria-pressed="false" onclick="filtrarAcervoDrive('image')">▧ Imagens</button>
+                <button type="button" class="resp-drive-filter" data-drive-filter="video" aria-pressed="false" onclick="filtrarAcervoDrive('video')">▶ Vídeos</button>
+            </div>
+        </section>
+
+        <section class="resp-drive-browser" aria-label="Arquivos da biblioteca">
+            <div class="resp-drive-browser-heading">
+                <div class="resp-drive-breadcrumbs" id="drive-breadcrumbs" aria-label="Caminho da pasta"></div>
+                <div class="resp-drive-list-summary">
+                    <span id="drive-count">Carregando…</span>
+                    <span id="drive-status" role="status" aria-live="polite" class="resp-drive-inline-status is-loading">Conectando ao acervo…</span>
+                </div>
+            </div>
+            <div id="drive-grid" class="resp-drive-grid" aria-live="polite">
+                <div class="resp-drive-empty resp-drive-empty-loading"><span class="resp-drive-loader"></span><strong>Carregando materiais</strong><p>Estamos buscando os arquivos desta pasta.</p></div>
+            </div>
+            <div class="resp-drive-load-more-wrap">
+                <button id="drive-load-more" type="button" class="question-action-secondary" hidden>Carregar mais arquivos</button>
             </div>
             <div class="resp-drive-fallback">
-                Se a pré-visualização não carregar ou o Google solicitar acesso, abra a <a href="https://drive.google.com/drive/folders/13tBBSrXMsu2NGW0jCSvrzIE9epV-Bw47" target="_blank" rel="noopener noreferrer">pasta original do Google Drive</a>. O acesso aos arquivos depende das permissões de compartilhamento da conta Google.
+                <span aria-hidden="true">ⓘ</span>
+                <p>O conteúdo é somente para visualização. A reprodução depende das permissões e do formato do arquivo no Google Drive. <a href="https://drive.google.com/drive/folders/13tBBSrXMsu2NGW0jCSvrzIE9epV-Bw47" target="_blank" rel="noopener noreferrer">Acessar a pasta original</a> se um conteúdo não puder ser incorporado.</p>
             </div>
         </section>
         <div id="module-toast" class="resp-toast" role="status" aria-live="polite"></div>
     </main>
-    <script src="/static/app.js?v=20261017-11"></script>
+
+    <div id="drive-viewer" class="resp-drive-viewer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="drive-viewer-title" hidden>
+        <div class="resp-drive-viewer-panel">
+            <header class="resp-drive-viewer-header">
+                <div class="resp-drive-viewer-title-wrap"><span class="resp-drive-viewer-kicker">Visualização de material</span><h2 id="drive-viewer-title">Arquivo</h2></div>
+                <div class="resp-drive-viewer-actions">
+                    <a id="drive-viewer-original" href="https://drive.google.com/drive/folders/13tBBSrXMsu2NGW0jCSvrzIE9epV-Bw47" target="_blank" rel="noopener noreferrer" class="resp-drive-viewer-link">Abrir original ↗</a>
+                    <button type="button" class="resp-drive-viewer-close" data-drive-close aria-label="Fechar visualizador">×</button>
+                </div>
+            </header>
+            <div id="drive-viewer-content" class="resp-drive-viewer-content"></div>
+        </div>
+    </div>
+
+    <script src="/static/app.js?v=20261017-12"></script>
 </body>
 </html>

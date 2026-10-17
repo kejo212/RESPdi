@@ -150,6 +150,79 @@ def route_listas(): return render_template('listas.html')
 @app.route('/materiais')
 def route_materiais(): return render_template('materiais.html')
 
+
+# Biblioteca pública do Drive: API exclusivamente de leitura.
+GOOGLE_DRIVE_API_KEY = os.environ.get("GOOGLE_DRIVE_API_KEY", "").strip()
+GOOGLE_DRIVE_FOLDER_ID = os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "13tBBSrXMsu2NGW0jCSvrzIE9epV-Bw47").strip()
+GOOGLE_DRIVE_API_URL = "https://www.googleapis.com/drive/v3/files"
+
+
+@app.route('/api/materiais/drive', methods=['GET'])
+def api_materiais_drive():
+    if not GOOGLE_DRIVE_API_KEY:
+        return jsonify({
+            "configurado": False,
+            "erro": "A biblioteca precisa ser configurada no servidor com uma chave de API do Google Drive."
+        }), 503
+
+    parent_id = request.args.get("parentId", GOOGLE_DRIVE_FOLDER_ID).strip()
+    caracteres_id_validos = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+    if not parent_id or len(parent_id) > 200 or not all(c in caracteres_id_validos for c in parent_id):
+        return jsonify({"erro": "Identificador de pasta inválido."}), 400
+
+    params = {
+        "key": GOOGLE_DRIVE_API_KEY,
+        "q": "'" + parent_id + "' in parents and trashed = false",
+        "pageSize": 100,
+        "orderBy": "folder,name",
+        "supportsAllDrives": "true",
+        "includeItemsFromAllDrives": "true",
+        "fields": "nextPageToken,files(id,name,mimeType,modifiedTime,size,thumbnailLink,resourceKey)"
+    }
+    page_token = request.args.get("pageToken", "").strip()
+    if page_token:
+        if len(page_token) > 4096:
+            return jsonify({"erro": "Token de paginação inválido."}), 400
+        params["pageToken"] = page_token
+
+    try:
+        resposta = requests.get(GOOGLE_DRIVE_API_URL, params=params, timeout=12)
+        if resposta.status_code == 403:
+            return jsonify({
+                "erro": "O Google recusou a listagem. Confirme se a Drive API está ativada e se a chave de API está configurada corretamente."
+            }), 502
+        if resposta.status_code == 404:
+            return jsonify({"erro": "A pasta não foi encontrada ou não está acessível por link público."}), 404
+        resposta.raise_for_status()
+        dados = resposta.json()
+    except requests.Timeout:
+        return jsonify({"erro": "O Google Drive demorou para responder. Tente novamente."}), 504
+    except requests.RequestException:
+        return jsonify({"erro": "Não foi possível consultar o Google Drive agora."}), 502
+    except ValueError:
+        return jsonify({"erro": "O Google Drive retornou uma resposta inválida."}), 502
+
+    arquivos = []
+    for arquivo in dados.get("files", []):
+        arquivos.append({
+            "id": arquivo.get("id", ""),
+            "name": arquivo.get("name", "Arquivo sem nome"),
+            "mimeType": arquivo.get("mimeType", "application/octet-stream"),
+            "modifiedTime": arquivo.get("modifiedTime"),
+            "size": arquivo.get("size"),
+            "thumbnailLink": arquivo.get("thumbnailLink"),
+            "resourceKey": arquivo.get("resourceKey")
+        })
+
+    response = jsonify({
+        "configurado": True,
+        "folderId": parent_id,
+        "files": arquivos,
+        "nextPageToken": dados.get("nextPageToken")
+    })
+    response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=300"
+    return response
+
 @app.route('/catalogo')
 def route_catalogo_removido(): return redirect('/dashboard')
 
