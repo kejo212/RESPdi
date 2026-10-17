@@ -317,10 +317,11 @@ function renderizarQuestoesUI(questoes, isCaderno = false) {
     if(!questoes || questoes.length === 0) { container.innerHTML = '<div class="p-8 bg-white rounded-2xl text-center text-gray-500 font-medium">Nenhuma questão encontrada com estes filtros.</div>'; return; }
 
     questoes.forEach((q, idx) => {
-        const status = progressoUsuario[q.id]; let tag = '';
-        if (status && status.timestamp && ((Date.now() - status.timestamp) / 3600000 >= 1)) {
-            const cor = status.acertou ? 'bg-green-500' : 'bg-red-500'; tag = `<div class="absolute -top-3 right-4 md:right-10 ${cor} text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg animate-fade-in z-10">${status.acertou ? 'Você Acertou' : 'Você Errou'}</div>`;
-        }
+        const status = progressoUsuario[q.id];
+        const respostaAnterior = Boolean(status && status.timestamp && status.escolhida && status.escolhida !== '-');
+        const classeResultado = respostaAnterior ? (status.acertou ? 'question-result-correct' : 'question-result-wrong') : 'is-hidden';
+        const textoResultado = respostaAnterior ? (status.acertou ? 'Você Acertou' : 'Você Errou') : '';
+        const tag = `<div id="resultado-questao-${q.id}" class="question-result-tag ${classeResultado}" role="status" aria-live="polite">${textoResultado}</div>`;
 
         let textoEnunciado = q.enunciado.replace(/^Enunciado\s*:\s*/i, '');
         let prefixoNumeracao = isCaderno ? `<span class="font-black text-blue-600 block mb-2 md:inline md:mr-2">Questão ${idx + 1}:</span>` : '';
@@ -328,14 +329,8 @@ function renderizarQuestoesUI(questoes, isCaderno = false) {
         let alts = `<div class="mt-6 space-y-3 w-full" id="alts-${q.id}">`;
         q.alternativas.forEach(alt => {
             const letra = alt.charAt(0);
-            let btnClasses = "w-full text-justify p-4 border rounded-xl transition-all duration-300 text-base md:text-lg break-words shadow-sm font-medium ";
-            if (status) {
-                btnClasses += "cursor-not-allowed opacity-80 ";
-                if (letra === q.gabarito_letra) btnClasses += "bg-green-50 border-green-400 text-green-900 font-bold "; 
-                else if (!status.acertou && status.escolhida === letra) btnClasses += "bg-red-50 border-red-300 text-red-900 "; 
-                else btnClasses += "bg-gray-50 border-gray-200 text-gray-500 "; 
-            } else { btnClasses += "bg-gray-50 border-gray-200 hover:border-green-400 hover:bg-white text-gray-800 "; }
-            alts += `<button id="btn-${q.id}-${letra}" ${status ? 'disabled' : ''} onclick="responderMestre('${q.id}', '${letra}', '${q.gabarito_letra}')" class="${btnClasses}">${alt}</button>`;
+            const btnClasses = "w-full text-justify p-4 border rounded-xl transition-all duration-300 text-base md:text-lg break-words shadow-sm font-medium bg-gray-50 border-gray-200 hover:border-green-400 hover:bg-white text-gray-800 ";
+            alts += `<button id="btn-${q.id}-${letra}" onclick="responderMestre('${q.id}', '${letra}', '${q.gabarito_letra}')" class="${btnClasses}">${alt}</button>`;
         });
         alts += `</div>`;
 
@@ -349,9 +344,18 @@ function renderizarQuestoesUI(questoes, isCaderno = false) {
     });
 }
 
+function atualizarTagResultadoQuestao(id) {
+    const tag = document.getElementById(`resultado-questao-${id}`);
+    const status = progressoUsuario[id];
+    if (!tag || !status || !status.escolhida || status.escolhida === '-') return;
+    tag.className = 'question-result-tag ' + (status.acertou ? 'question-result-correct' : 'question-result-wrong');
+    tag.textContent = status.acertou ? 'Você Acertou' : 'Você Errou';
+}
+
 function responderMestre(id, escolhida, correta) {
     tentativasUsuario.unshift({id:String(id),escolhida:escolhida,correta:correta,acertou:(escolhida===correta),timestamp:Date.now()}); if(tentativasUsuario.length>1000)tentativasUsuario=tentativasUsuario.slice(0,1000); syncDB('tentativas',tentativasUsuario);
     progressoUsuario[id] = { acertou: (escolhida === correta), escolhida: escolhida, timestamp: Date.now() }; syncDB('progresso', progressoUsuario);
+    atualizarTagResultadoQuestao(id);
     const botoes = document.getElementById(`alts-${id}`).getElementsByTagName('button');
     for (let btn of botoes) {
         btn.disabled = true; btn.classList.add('cursor-not-allowed', 'opacity-80'); btn.classList.remove('hover:border-green-400', 'hover:bg-white', 'text-gray-800');
@@ -364,13 +368,8 @@ function responderMestre(id, escolhida, correta) {
 }
 
 function mostrarResolucao(id, autoAberta = false) {
-    const box = document.getElementById(`com-${id}`); if (box) box.classList.remove('hidden');
-    if (!autoAberta && !progressoUsuario[id]) {
-        progressoUsuario[id] = { acertou: false, escolhida: '-', timestamp: Date.now() }; syncDB('progresso', progressoUsuario);
-        const botoes = document.getElementById(`alts-${id}`).children;
-        for (let b of botoes) { b.disabled = true; b.classList.add('opacity-50', 'cursor-not-allowed'); b.classList.remove('hover:border-green-400', 'hover:bg-white'); }
-        atualizarNumerosEstatisticas();
-    }
+    const box = document.getElementById(`com-${id}`);
+    if (box) box.classList.remove('hidden');
 }
 
 async function enviarReporte(id) { const tb = document.getElementById(`texto-report-${id}`); const motivo = tb.value.trim(); if (!motivo) return alert("Descreva o erro."); try { await fetch('/api/reportar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: id, motivo: motivo, usuario: currentUser }) }); document.getElementById(`report-box-${id}`).classList.add('hidden'); tb.value = ''; alert("Erro reportado na nuvem com sucesso!"); } catch(e) {} }

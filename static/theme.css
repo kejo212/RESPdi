@@ -498,3 +498,25 @@ body.page-dashboard, body.page-questions, body.page-notebooks, body.page-profile
   .question-recent-filter-list { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .question-recent-filter { min-height: 48px; }
 }
+
+
+/* Resultado mais recente da questão; permanece visível após nova busca ou recarga. */
+.question-result-tag {
+  position: absolute;
+  top: -12px;
+  right: 16px;
+  z-index: 10;
+  padding: 6px 13px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(25, 50, 60, .12);
+}
+.question-result-tag.is-hidden { display: none !important; }
+.question-result-correct { background: #20a36b; }
+.question-result-wrong { background: #dc5964; }
+@media (min-width: 768px) {
+  .question-result-tag { right: 26px; }
+}

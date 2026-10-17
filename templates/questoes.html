@@ -6,7 +6,7 @@
     <title>RESPdi - Simulado</title>
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/static/theme.css?v=20261017-6">
+    <link rel="stylesheet" href="/static/theme.css?v=20261017-7">
     <style>
         .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -155,7 +155,7 @@
     <div id="modal-lista" class="resp-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-lista-title"><div class="resp-modal-card"><div class="resp-modal-heading"><div><span class="resp-eyebrow">Nova coleção</span><h3 id="modal-lista-title">Criar lista</h3></div><button type="button" class="resp-icon-button" onclick="fecharModalLista()" aria-label="Fechar">×</button></div><label class="question-filter-field"><span class="question-filter-label">Nome da lista</span><input id="nome-lista" maxlength="100" placeholder="Ex.: Revisão de pediatria"></label><p class="question-filter-help">A lista será criada com as questões correspondentes aos filtros atuais. A coleção original não será alterada.</p><div class="resp-modal-actions"><button class="question-action-secondary" onclick="fecharModalLista()">Cancelar</button><button class="question-action-primary" id="btn-criar-lista" onclick="salvarListaAtual()">Salvar lista</button></div></div></div>
     <div id="modal-simulado" class="resp-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-simulado-title"><div class="resp-modal-card"><div class="resp-modal-heading"><div><span class="resp-eyebrow">Prova personalizada</span><h3 id="modal-simulado-title">Criar novo simulado</h3></div><button type="button" class="resp-icon-button" onclick="fecharModalSimulado()" aria-label="Fechar">×</button></div><label class="question-filter-field"><span class="question-filter-label">Nome do simulado</span><input id="nome-simulado" maxlength="100" placeholder="Ex.: ENARE 2026"></label><div class="question-filter-advanced-grid"><label class="question-filter-field"><span class="question-filter-label">Horas</span><input id="tempo-simulado-h" type="number" min="0" max="24" value="3"></label><label class="question-filter-field"><span class="question-filter-label">Minutos</span><input id="tempo-simulado-m" type="number" min="0" max="59" value="45"></label></div><label class="question-filter-field"><span class="question-filter-label">Quantidade de questões</span><input id="qtd-simulado" type="number" min="1" max="1000" value="100"></label><p class="question-filter-help">O simulado usa os filtros atuais e salva a duração em minutos.</p><div class="resp-modal-actions"><button class="question-action-secondary" onclick="fecharModalSimulado()">Cancelar</button><button class="question-action-primary" id="btn-criar-simulado" onclick="salvarSimuladoAtual()">Criar simulado</button></div></div></div>
 
-    <script src="/static/app.js?v=20261017-3"></script>
+    <script src="/static/app.js?v=20261017-4"></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             if(localStorage.getItem('hideTemas') === 'true') {
