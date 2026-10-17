@@ -335,9 +335,9 @@ function renderizarQuestoesUI(questoes, isCaderno = false) {
         alts += `</div>`;
 
         const iconeBandeira = `<svg class="w-6 h-6 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path></svg>`;
-        const btnReport = `<button onclick="document.getElementById('report-box-${q.id}').classList.toggle('hidden')" class="text-gray-300 hover:text-red-500 transition p-2" title="Reportar erro">${iconeBandeira}</button>`;
+        const btnReport = `<button type="button" onclick="document.getElementById('report-box-${q.id}').classList.toggle('hidden')" class="resp-question-action resp-question-report" title="Reportar erro" aria-label="Reportar erro">${iconeBandeira}<span class="sr-only">Reportar erro</span></button>`;
         const boxReport = `<div id="report-box-${q.id}" class="hidden mt-4 p-5 bg-red-50 border border-red-100 rounded-xl animate-fade-in w-full"><p class="text-xs font-bold text-red-700 mb-2 uppercase tracking-wide">Reportar Problema</p><textarea id="texto-report-${q.id}" rows="2" class="w-full p-4 rounded-xl border border-red-200 text-base outline-none focus:ring-2 focus:ring-red-400 resize-none shadow-sm" placeholder="Ex: Gabarito incorreto..."></textarea><div class="flex justify-end gap-3 mt-3"><button onclick="document.getElementById('report-box-${q.id}').classList.add('hidden')" class="text-base text-gray-500 hover:underline px-3 font-medium">Cancelar</button><button onclick="enviarReporte('${q.id}')" class="text-base bg-red-500 hover:bg-red-600 text-white font-bold px-6 py-2 rounded-xl transition shadow-sm">Enviar ao Suporte</button></div></div>`;
-        const btnRes = `<div class="flex justify-between items-center mt-6 w-full border-t border-gray-100 pt-4"><button onclick="mostrarResolucao('${q.id}', false)" class="text-blue-600 text-base md:text-lg font-bold hover:underline p-2 -ml-2 transition">Ver Resolução</button>${btnReport}</div>`;
+        const btnRes = `<div class="question-controls-footer mt-6 w-full border-t border-gray-100 pt-4"><button type="button" onclick="mostrarResolucao('${q.id}', false)" class="question-resolution-link">Ver Resolução</button><div class="resp-question-actions">${btnReport}</div></div>`;
         const comHtml = `<div id="com-${q.id}" class="hidden mt-4 p-6 bg-blue-50 border border-blue-100 rounded-xl text-justify animate-fade-in w-full shadow-sm"><p class="font-black text-blue-900 mb-3 text-base md:text-lg">Gabarito: ${q.gabarito_letra}</p><p class="text-gray-800 leading-relaxed text-base break-words font-medium">${q.comentario}</p></div>`;
 
         container.innerHTML += `<div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 mb-8 relative w-full">${tag}<div class="tema-dinamico-badge text-xs text-blue-500 bg-blue-50 inline-block px-3 py-1 rounded-full mb-4 font-bold tracking-widest uppercase break-words border border-blue-100">${q.temas_dinamicos.join(' • ')}</div><p class="text-base md:text-lg text-justify leading-relaxed font-bold text-gray-900 break-words">${prefixoNumeracao}${textoEnunciado}</p>${alts}${btnRes}${boxReport}${comHtml}</div>`;
@@ -713,8 +713,9 @@ renderizarQuestoesUI = function(questoes, isCaderno = false) {
         const match = card.innerHTML.match(/id="alts-([^"]+)"/);
         const id = match ? match[1] : '';
         if (!id) return;
-        const footer = card.querySelector('div.flex.justify-between.items-center.mt-6');
-        if (!footer || footer.querySelector('[data-question-action="favorite"]')) return;
+        const footer = card.querySelector('.question-controls-footer');
+        const actions = footer && footer.querySelector('.resp-question-actions');
+        if (!actions || actions.querySelector('[data-question-action="favorite"]')) return;
 
         const historico = document.createElement('button');
         historico.type = 'button';
@@ -724,7 +725,7 @@ renderizarQuestoesUI = function(questoes, isCaderno = false) {
         historico.title = 'Ver histórico da questão ' + id;
         historico.setAttribute('aria-label', 'Ver histórico da questão ' + id);
         historico.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l3 2"></path></svg><span>Histórico</span>`;
-        footer.insertBefore(historico, footer.lastElementChild);
+        actions.appendChild(historico);
 
         const ativa = favoritosUsuario.some(item => String(item.id) === String(id));
         const favorito = document.createElement('button');
@@ -736,7 +737,7 @@ renderizarQuestoesUI = function(questoes, isCaderno = false) {
         favorito.setAttribute('aria-pressed', String(ativa));
         favorito.setAttribute('aria-label', ativa ? 'Remover questão ' + id + ' dos favoritos' : 'Favoritar questão ' + id);
         favorito.title = ativa ? 'Remover dos favoritos' : 'Favoritar questão';
-        footer.insertBefore(favorito, footer.lastElementChild);
+        actions.appendChild(favorito);
     });
 };
 document.addEventListener('click', evento => {
