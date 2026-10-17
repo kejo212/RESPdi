@@ -492,3 +492,18 @@
     scroll-behavior: auto !important;
   }
 }
+
+
+/* Correção definitiva: a barra superior respeita a largura real da sidebar
+   recolhida no desktop; a sidebar expandida permanece sobreposta ao conteúdo. */
+@media screen and (min-width: 768px) {
+  body .resp-topbar {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    left: 76px !important;
+    width: calc(100% - 76px) !important;
+    max-width: calc(100% - 76px) !important;
+    box-sizing: border-box !important;
+  }
+}
