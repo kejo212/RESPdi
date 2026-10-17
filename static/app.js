@@ -19,9 +19,55 @@ let leitorConcluidoUsuario = false;
 let fonteLeitorUsuario = 16;
 let temporizadorSimulado = null;
 
+const RESP_USER_DATA_CACHE_TTL = 10 * 60 * 1000;
+const RESP_USER_DATA_DEFAULTS = {
+    progresso: {}, cadernos: [], historico: [], listas: [], simulados: [],
+    favoritos: [], tentativas: [], anotacoes: [], agenda: [], leitorConcluido: false
+};
+function respUserDataCacheKey(field) {
+    return `respUserData:v1:${currentUser}:${field}`;
+}
+function respWriteUserDataField(field, value) {
+    if (!Object.prototype.hasOwnProperty.call(RESP_USER_DATA_DEFAULTS, field)) return;
+    try {
+        sessionStorage.setItem(respUserDataCacheKey(field), JSON.stringify({savedAt: Date.now(), value: value}));
+    } catch (e) {}
+}
+function respWriteUserDataCache(data) {
+    Object.keys(RESP_USER_DATA_DEFAULTS).forEach(field => {
+        const value = data && Object.prototype.hasOwnProperty.call(data, field)
+            ? data[field] : RESP_USER_DATA_DEFAULTS[field];
+        respWriteUserDataField(field, value);
+    });
+}
+function respReadUserDataCache() {
+    const data = {};
+    const now = Date.now();
+    try {
+        for (const field of Object.keys(RESP_USER_DATA_DEFAULTS)) {
+            const raw = sessionStorage.getItem(respUserDataCacheKey(field));
+            if (!raw) return null;
+            const entry = JSON.parse(raw);
+            if (!entry || !Number.isFinite(entry.savedAt) || now < entry.savedAt
+                || now - entry.savedAt > RESP_USER_DATA_CACHE_TTL
+                || !Object.prototype.hasOwnProperty.call(entry, 'value')) return null;
+            data[field] = entry.value;
+        }
+        return data;
+    } catch (e) {
+        return null;
+    }
+}
+
 async function syncDB(tipo, dados) {
     if(currentUser === 'visitante') return;
-    try { await fetch(`/api/sync/${currentUser}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({tipo: tipo, dados: dados}) }); } catch(e) {}
+    try {
+        const response = await fetch(`/api/sync/${currentUser}`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({tipo: tipo, dados: dados})
+        });
+        if (response.ok) respWriteUserDataField(tipo, dados);
+    } catch(e) {}
 }
 
 function alternarTela(alvo) {
@@ -424,7 +470,7 @@ function renderizarQuestoesUI(questoes, isCaderno = false) {
         const btnReport = `<button type="button" onclick="document.getElementById('report-box-${q.id}').classList.toggle('hidden')" class="resp-question-action resp-question-report" title="Reportar erro" aria-label="Reportar erro">${iconeBandeira}<span class="sr-only">Reportar erro</span></button>`;
         const boxReport = `<div id="report-box-${q.id}" class="hidden mt-4 p-5 bg-red-50 border border-red-100 rounded-xl animate-fade-in w-full"><p class="text-xs font-bold text-red-700 mb-2 uppercase tracking-wide">Reportar Problema</p><textarea id="texto-report-${q.id}" rows="2" class="w-full p-4 rounded-xl border border-red-200 text-base outline-none focus:ring-2 focus:ring-red-400 resize-none shadow-sm" placeholder="Ex: Gabarito incorreto..."></textarea><div class="flex justify-end gap-3 mt-3"><button onclick="document.getElementById('report-box-${q.id}').classList.add('hidden')" class="text-base text-gray-500 hover:underline px-3 font-medium">Cancelar</button><button onclick="enviarReporte('${q.id}')" class="text-base bg-red-500 hover:bg-red-600 text-white font-bold px-6 py-2 rounded-xl transition shadow-sm">Enviar ao Suporte</button></div></div>`;
         const btnRes = `<div class="question-controls-footer mt-6 w-full border-t border-gray-100 pt-4"><button type="button" onclick="mostrarResolucao('${q.id}', false)" class="question-resolution-link">Ver Resolução</button><div class="resp-question-actions">${btnReport}</div></div>`;
-        const comHtml = `<div id="com-${q.id}" class="hidden mt-4 p-6 bg-blue-50 border border-blue-100 rounded-xl text-justify animate-fade-in w-full shadow-sm"><p class="font-black text-blue-900 mb-3 text-base md:text-lg">Gabarito: ${q.gabarito_letra}</p><p class="text-gray-800 leading-relaxed text-base break-words font-medium">${q.comentario}</p></div>`;
+        const comHtml = `<div id="com-${q.id}" class="hidden mt-4 p-6 bg-blue-50 border border-blue-100 rounded-xl text-justify animate-fade-in w-full shadow-sm"><p class="font-black text-blue-900 mb-3 text-base md:text-lg">Gabarito: ${q.gabarito_letra}</p><p id="comentario-${q.id}" class="text-gray-800 leading-relaxed text-base break-words font-medium">${q.comentario || ''}</p></div>`;
 
         container.innerHTML += `<div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 mb-8 relative w-full">${tag}<div class="tema-dinamico-badge text-xs text-blue-500 bg-blue-50 inline-block px-3 py-1 rounded-full mb-4 font-bold tracking-widest uppercase break-words border border-blue-100">${q.temas_dinamicos.join(' • ')}</div><p class="text-base md:text-lg text-justify leading-relaxed font-bold text-gray-900 break-words">${prefixoNumeracao}${textoEnunciado}</p>${alts}${btnRes}${boxReport}${comHtml}</div>`;
     });
@@ -453,9 +499,38 @@ function responderMestre(id, escolhida, correta) {
     mostrarResolucao(id, true); atualizarNumerosEstatisticas();
 }
 
-function mostrarResolucao(id, autoAberta = false) {
+async function mostrarResolucao(id, autoAberta = false) {
     const box = document.getElementById(`com-${id}`);
-    if (box) box.classList.remove('hidden');
+    if (!box) return;
+    box.classList.remove('hidden');
+
+    const host = document.getElementById(`comentario-${id}`);
+    if (!host || host.dataset.resolutionLoaded === 'true' || host.dataset.resolutionLoading === 'true') return;
+
+    const cachedQuestion = (window.respQuestionCache || {})[String(id)];
+    const savedComment = cachedQuestion && typeof cachedQuestion.comentario === 'string'
+        ? cachedQuestion.comentario : '';
+    if (savedComment.trim()) {
+        host.innerHTML = savedComment;
+        host.dataset.resolutionLoaded = 'true';
+        return;
+    }
+
+    host.textContent = 'Carregando resolução…';
+    host.dataset.resolutionLoading = 'true';
+    try {
+        const response = await fetch(`/api/questao-resolucao/${encodeURIComponent(String(id))}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.erro || 'Não foi possível carregar a resolução.');
+        const comentario = String(data.comentario || '');
+        host.innerHTML = comentario || 'Não há resolução cadastrada para esta questão.';
+        if (cachedQuestion) cachedQuestion.comentario = comentario;
+        host.dataset.resolutionLoaded = 'true';
+    } catch (error) {
+        host.textContent = 'Não foi possível carregar a resolução. Clique em “Ver Resolução” para tentar novamente.';
+    } finally {
+        host.dataset.resolutionLoading = 'false';
+    }
 }
 
 async function enviarReporte(id) { const tb = document.getElementById(`texto-report-${id}`); const motivo = tb.value.trim(); if (!motivo) return alert("Descreva o erro."); try { await fetch('/api/reportar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: id, motivo: motivo, usuario: currentUser }) }); document.getElementById(`report-box-${id}`).classList.add('hidden'); tb.value = ''; alert("Erro reportado na nuvem com sucesso!"); } catch(e) {} }
@@ -526,8 +601,23 @@ async function gerarPDF() {
 document.addEventListener("DOMContentLoaded", async () => {
     if (currentUser !== 'visitante') {
         try {
-            const res = await fetch(`/api/sync/${currentUser}`); const data = await res.json();
-            progressoUsuario = data.progresso || {}; cadernosUsuario = data.cadernos || []; historicoUsuario = data.historico || []; listasUsuario = data.listas || []; simuladosUsuario = data.simulados || []; favoritosUsuario = data.favoritos || []; tentativasUsuario = data.tentativas || []; anotacoesUsuario = data.anotacoes || []; agendaUsuario = data.agenda || []; leitorConcluidoUsuario = data.leitorConcluido || false;
+            let data = respReadUserDataCache();
+            if (!data) {
+                const res = await fetch(`/api/sync/${currentUser}`);
+                if (!res.ok) throw new Error('Não foi possível carregar os dados da conta.');
+                data = await res.json();
+                respWriteUserDataCache(data);
+            }
+            progressoUsuario = data.progresso || {};
+            cadernosUsuario = data.cadernos || [];
+            historicoUsuario = data.historico || [];
+            listasUsuario = data.listas || [];
+            simuladosUsuario = data.simulados || [];
+            favoritosUsuario = data.favoritos || [];
+            tentativasUsuario = data.tentativas || [];
+            anotacoesUsuario = data.anotacoes || [];
+            agendaUsuario = data.agenda || [];
+            leitorConcluidoUsuario = data.leitorConcluido || false;
         } catch(e) {}
     }
     atualizarNumerosEstatisticas();

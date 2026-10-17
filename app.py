@@ -1,8 +1,44 @@
 from flask import Flask, request, jsonify, render_template, send_from_directory, redirect
-import json, glob, os, random, requests, hmac
+import json, glob, os, random, requests, hmac, gzip
 from datetime import datetime
 
 app = Flask(__name__)
+
+# Reduz o tráfego de HTML, CSS, JavaScript e JSON e aproveita o cache do navegador.
+@app.after_request
+def otimizar_resposta_http(response):
+    if request.method == "GET":
+        if request.path.startswith("/static/") and request.args.get("v"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif request.path in ("/api/categorias", "/api/questao-filtros") or request.path.startswith("/api/questao-resolucao/"):
+            response.headers["Cache-Control"] = "public, max-age=3600, stale-while-revalidate=86400"
+
+    mime = (response.mimetype or "").lower()
+    compressivel = (
+        mime.startswith("text/")
+        or mime in ("application/json", "application/javascript", "application/xhtml+xml", "application/xml")
+        or mime.endswith("+json")
+    )
+    if (
+        compressivel
+        and response.status_code == 200
+        and not response.headers.get("Content-Encoding")
+        and request.accept_encodings["gzip"] > 0
+    ):
+        response.vary.add("Accept-Encoding")
+        try:
+            response.direct_passthrough = False
+            corpo = response.get_data()
+            if len(corpo) >= 1024:
+                comprimido = gzip.compress(corpo, compresslevel=6, mtime=0)
+                if len(comprimido) < len(corpo):
+                    response.set_data(comprimido)
+                    response.headers["Content-Encoding"] = "gzip"
+                    # O ETag da versão sem compressão não pode ser reaproveitado.
+                    response.headers.pop("ETag", None)
+        except (OSError, RuntimeError, TypeError):
+            pass
+    return response
 
 
 MODULE_PAGES = {
@@ -60,6 +96,27 @@ for caminho_arquivo in arquivos_json:
             with open(caminho_arquivo, 'r', encoding='latin-1') as f: banco_questoes.extend(json.load(f))
         except: pass
     except: pass
+
+# Índice para carregar a resolução só quando o estudante a solicitar.
+questoes_por_id = {}
+for _questao in banco_questoes:
+    questoes_por_id.setdefault(str(_questao.get("id", "X")), _questao)
+
+
+def remover_comentarios_de_questoes_salvas(valor):
+    """Não envia resoluções grandes junto com todo o histórico salvo do usuário."""
+    if isinstance(valor, dict):
+        questao_id = str(valor.get("id", "X"))
+        eh_questao = "enunciado" in valor and ("alternativas" in valor or "gabarito_letra" in valor)
+        # Preserva comentário de questões antigas que não existem mais no banco atual.
+        if eh_questao and questao_id in questoes_por_id:
+            valor.pop("comentario", None)
+        for filho in valor.values():
+            remover_comentarios_de_questoes_salvas(filho)
+    elif isinstance(valor, list):
+        for filho in valor:
+            remover_comentarios_de_questoes_salvas(filho)
+
 
 # ==========================================
 # 3. GESTÃO DE USUÁRIOS
@@ -247,7 +304,10 @@ def admin_reportes():
     return jsonify([])
 
 @app.route('/api/sync/<user>', methods=['GET'])
-def get_user_data(user): return jsonify(fb_get(f'userdata/{user}'))
+def get_user_data(user):
+    dados = fb_get(f'userdata/{user}')
+    remover_comentarios_de_questoes_salvas(dados)
+    return jsonify(dados)
 @app.route('/api/sync/<user>', methods=['POST'])
 def update_user_data(user):
     payload = request.json
@@ -319,6 +379,18 @@ def obter_opcoes_filtros_questoes():
         "contagens":contagens,
         "disponibilidade":{"video":tem_video,"vigencia":tem_vigencia,**{campo:bool(valores) for campo,valores in opcoes.items()}}
     })
+
+@app.route('/api/questao-resolucao/<questao_id>', methods=['GET'])
+def obter_resolucao_questao(questao_id):
+    questao = questoes_por_id.get(str(questao_id))
+    if not questao:
+        return jsonify({"erro": "Questão não encontrada."}), 404
+    return jsonify({
+        "id": str(questao.get("id", "X")),
+        "gabarito_letra": str(questao.get("gabarito_letra", "X")).strip().upper(),
+        "comentario": str(questao.get("comentario", ""))
+    })
+
 
 @app.route('/api/questoes', methods=['POST'])
 def obter_questoes():
@@ -415,7 +487,7 @@ def obter_questoes():
                 "id": q_id, "temas_dinamicos": [m, a, s],
                 "enunciado": str(q.get("enunciado", "")),
                 "alternativas": alternativas,
-                "gabarito_letra": gabarito, "comentario": comentario,
+                "gabarito_letra": gabarito,
                 "metadados": _metadados_saida(q), "tem_video": tem_video_questao,
                 "tipo_questao": tipo_real, "anulada": gabarito not in ["A","B","C","D","E"]
             })
