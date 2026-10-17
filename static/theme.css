@@ -1155,3 +1155,14 @@ body.page-dashboard, body.page-questions, body.page-notebooks, body.page-profile
     background:transparent !important; color:#344c53 !important;
   }
 }
+
+
+/* No desktop padrão, a barra superior começa após a sidebar recolhida,
+   evitando que os dois elementos ocupem a mesma área. */
+@media (min-width: 768px) {
+  .resp-topbar {
+    left: 100px !important;
+    width: calc(100% - 100px) !important;
+    box-sizing: border-box !important;
+  }
+}
