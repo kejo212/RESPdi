@@ -42,14 +42,36 @@ async function fazerLogin() {
 }
 
 async function enviarCadastro() {
-    const u = document.getElementById('new-user').value.trim(); const p = document.getElementById('new-pass').value.trim();
+    const u = document.getElementById('new-user').value.trim();
+    const p = document.getElementById('new-pass').value.trim();
     const tags = Array.from(document.querySelectorAll('.tag-check:checked')).map(el => el.value);
+    const codigoInput = document.getElementById('codigo-cadastro');
+    const codigo = codigoInput ? codigoInput.value.trim() : '';
     if (!u || !p) return alert("Preencha todos os campos!");
+    if (codigo && !/^\d{1,20}$/.test(codigo)) return alert("O código de acesso deve conter somente números.");
     try {
-        const res = await fetch('/api/cadastro', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: u, password: p, tags: tags}) });
+        const res = await fetch('/api/cadastro', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: u, password: p, tags: tags, codigo_cadastro: codigo})
+        });
         const data = await res.json();
-        if(res.ok && data.sucesso) { alert("Cadastro enviado! Aguarde a aprovação."); alternarTela('form-login'); } else { alert(data.erro); }
-    } catch (e) {}
+        if (res.ok && data.sucesso) {
+            if (data.aprovado_automaticamente) {
+                alert("Cadastro aprovado automaticamente! Você já pode entrar com seu usuário e senha.");
+            } else if (codigo) {
+                alert("Código não reconhecido. Sua solicitação foi enviada para aprovação do administrador.");
+            } else {
+                alert("Cadastro enviado! Aguarde a aprovação.");
+            }
+            if (codigoInput) codigoInput.value = '';
+            alternarTela('form-login');
+        } else {
+            alert(data.erro || "Não foi possível concluir o cadastro.");
+        }
+    } catch (e) {
+        alert("Erro de conexão ao enviar o cadastro.");
+    }
 }
 
 function alternarTemas() {
@@ -71,6 +93,50 @@ async function carregarConfigGlobal() {
         const toggle = document.getElementById('toggle-ocultar-incompletas');
         if (toggle) toggle.checked = config.ocultar_incompletas || false;
     } catch(e) {}
+}
+
+async function carregarCodigoCadastro() {
+    const input = document.getElementById('codigo-cadastro-admin');
+    const status = document.getElementById('status-codigo-cadastro');
+    if (!input) return;
+    try {
+        const res = await fetch('/api/admin/codigo-cadastro?username=' + encodeURIComponent(currentUser), {cache:'no-store'});
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.erro || 'Não foi possível carregar o código atual.');
+        input.value = String(data.codigo || '');
+        if (status) status.textContent = 'Código atual carregado. Você pode substituí-lo acima.';
+    } catch (error) {
+        if (status) status.textContent = error.message || 'Erro ao carregar o código.';
+    }
+}
+
+async function salvarCodigoCadastro() {
+    const input = document.getElementById('codigo-cadastro-admin');
+    const status = document.getElementById('status-codigo-cadastro');
+    const button = document.getElementById('btn-salvar-codigo-cadastro');
+    if (!input) return;
+    const codigo = input.value.trim();
+    if (!/^\d{1,20}$/.test(codigo)) {
+        if (status) status.textContent = 'Digite somente números (de 1 a 20 dígitos).';
+        input.focus();
+        return;
+    }
+    if (button) { button.disabled = true; button.textContent = 'Salvando…'; }
+    try {
+        const res = await fetch('/api/admin/codigo-cadastro', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: currentUser, codigo: codigo})
+        });
+        const data = await res.json();
+        if (!res.ok || !data.sucesso) throw new Error(data.erro || 'Não foi possível salvar o código.');
+        if (status) status.textContent = 'Código atualizado. Novos cadastros usarão o novo código.';
+        mostrarToast('Código de cadastro atualizado.');
+    } catch (error) {
+        if (status) status.textContent = error.message || 'Erro ao salvar o código.';
+    } finally {
+        if (button) { button.disabled = false; button.textContent = 'Salvar código'; }
+    }
 }
 
 async function salvarConfigGlobal() {
@@ -453,6 +519,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (currentUser === 'davi' && document.getElementById('admin-panel')) { 
         document.getElementById('admin-panel').classList.remove('hidden'); 
         carregarConfigGlobal();
+        carregarCodigoCadastro();
         carregarPainelAdmin(); 
         carregarLogsServidor(); 
         setInterval(carregarLogsServidor, 3000); 

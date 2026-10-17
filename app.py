@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template, send_from_directory, redirect
-import json, glob, os, random, requests
+import json, glob, os, random, requests, hmac
 from datetime import datetime
 
 app = Flask(__name__)
@@ -15,6 +15,7 @@ MODULE_PAGES = {
 }
 
 FIREBASE_URL = "https://respdi-1b63d-default-rtdb.firebaseio.com"
+CODIGO_CADASTRO_PADRAO = "78467812836"
 
 # ==========================================
 # 1. FUNÇÕES DO FIREBASE (AGORA COM ANTI-CACHE)
@@ -128,14 +129,20 @@ def login():
 
 @app.route('/api/cadastro', methods=['POST'])
 def cadastro():
-    dados = request.json
+    dados = request.get_json(silent=True) or {}
     db = carregar_usuarios()
-    user = dados.get('username', '').strip()
+    user = str(dados.get('username', '')).strip()
+    senha = str(dados.get('password', '')).strip()
+    if not user or not senha: return jsonify({"erro": "Preencha o usuário e a senha."}), 400
     if any(c in user for c in ['.', '$', '#', '[', ']', '/']): return jsonify({"erro": "O nome não pode conter pontos ou símbolos especiais."}), 400
     if user in db: return jsonify({"erro": "Usuário já existe."}), 400
-    db[user] = {"senha": dados.get('password'), "status": "pendente", "tags": dados.get('tags', []), "ultimo_acesso": "Nunca"}
+
+    codigo_informado = str(dados.get('codigo_cadastro') or '').strip()
+    codigo_valido = codigo_informado.isdigit() and hmac.compare_digest(codigo_informado, obter_codigo_cadastro())
+    status = "aprovado" if codigo_valido else "pendente"
+    db[user] = {"senha": senha, "status": status, "tags": dados.get('tags', []), "ultimo_acesso": "Nunca"}
     if not fb_put('usuarios', db): return jsonify({"erro": "Erro no Firebase."}), 500
-    return jsonify({"sucesso": True})
+    return jsonify({"sucesso": True, "aprovado_automaticamente": bool(codigo_valido), "status": status})
 
 @app.route('/api/admin/pendentes', methods=['GET'])
 def listar_pendentes(): return jsonify({k: v for k, v in carregar_usuarios().items() if v['status'] == 'pendente'})
@@ -168,20 +175,48 @@ def excluir_usuario():
 def obter_logs(): return jsonify(sys_logs)
 
 # ROTAS DA CONFIGURAÇÃO GLOBAL DO DAVI
+def obter_codigo_cadastro():
+    cfg = fb_get('config')
+    if not isinstance(cfg, dict): cfg = {}
+    codigo = str(cfg.get('codigo_cadastro') or CODIGO_CADASTRO_PADRAO)
+    return codigo if codigo.isdigit() else CODIGO_CADASTRO_PADRAO
+
+@app.route('/api/admin/codigo-cadastro', methods=['GET', 'POST'])
+def gerenciar_codigo_cadastro():
+    if request.method == 'GET':
+        if request.args.get('username') != 'davi': return jsonify({"erro": "Não autorizado"}), 403
+        return jsonify({"codigo": obter_codigo_cadastro()})
+
+    dados = request.get_json(silent=True) or {}
+    if dados.get('username') != 'davi': return jsonify({"erro": "Não autorizado"}), 403
+    codigo = str(dados.get('codigo') or '').strip()
+    if not codigo.isdigit() or len(codigo) > 20:
+        return jsonify({"erro": "Informe um código composto somente por números (até 20 dígitos)."}), 400
+
+    cfg = fb_get('config')
+    if not isinstance(cfg, dict): cfg = {}
+    cfg['codigo_cadastro'] = codigo
+    if not fb_put('config', cfg): return jsonify({"erro": "Não foi possível salvar o código."}), 500
+    registrar_log("ADMIN: Código de cadastro atualizado.")
+    return jsonify({"sucesso": True})
+
 @app.route('/api/admin/config', methods=['POST'])
 def update_config():
-    dados = request.json
+    dados = request.get_json(silent=True) or {}
     if dados.get('username') != 'davi': return jsonify({"erro": "Não autorizado"}), 403
-    novo_status = dados.get('ocultar_incompletas', False)
-    fb_put('config', {"ocultar_incompletas": novo_status})
+    novo_status = bool(dados.get('ocultar_incompletas', False))
+    cfg = fb_get('config')
+    if not isinstance(cfg, dict): cfg = {}
+    cfg['ocultar_incompletas'] = novo_status
+    if not fb_put('config', cfg): return jsonify({"erro": "Erro ao salvar a configuração."}), 500
     registrar_log(f"ADMIN: Ocultar Incompletas alterado para = {novo_status}")
     return jsonify({"sucesso": True})
 
 @app.route('/api/config', methods=['GET'])
-def get_config(): 
+def get_config():
     cfg = fb_get('config')
-    if not isinstance(cfg, dict): cfg = {"ocultar_incompletas": False}
-    return jsonify(cfg)
+    if not isinstance(cfg, dict): cfg = {}
+    return jsonify({"ocultar_incompletas": bool(cfg.get("ocultar_incompletas", False))})
 
 @app.route('/api/admin/estatisticas_usuarios', methods=['GET'])
 def estatisticas_usuarios():

@@ -35,7 +35,7 @@
           style="background-image: linear-gradient(rgba(15, 23, 42, 0.90), rgba(30, 58, 138, 0.83)), url('https://images.unsplash.com/photo-1775947933085-30050ddad6b3?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'); background-size: cover; background-position: center; background-attachment: fixed;">
         
         <!-- Container dos Formulários (Ocupa a tela no mobile, tamanho fixo no PC) -->
-        <div class="w-full max-w-md h-[450px] relative overflow-hidden">
+        <div class="w-full max-w-md relative" style="height:min(560px, calc(100vh - 100px)); overflow-y:auto; overflow-x:hidden;">
             
             <!-- ========================================== -->
             <!-- FORMULÁRIO DE LOGIN -->
@@ -105,7 +105,13 @@
                     <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-green-500 rounded border-none bg-white tag-check" value="PET Clima"> <span class="text-base font-semibold text-gray-200">Faço parte do PET Clima</span></label>
                     <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-green-500 rounded border-none bg-white tag-check" value="Não sou PF"> <span class="text-base font-semibold text-gray-200">Não sou da PF</span></label>
                 </div>
-                
+
+                <div class="mb-4 -mt-2">
+                    <label for="codigo-cadastro" class="block text-sm font-bold text-gray-200 mb-2">Código de acesso <span class="text-gray-400 font-normal">(opcional)</span></label>
+                    <input type="password" id="codigo-cadastro" inputmode="numeric" pattern="[0-9]*" maxlength="20" autocomplete="one-time-code" placeholder="Digite o código numérico" class="w-full px-5 py-3 bg-white border-none rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all text-gray-900 font-bold text-base shadow-lg">
+                    <p class="mt-2 text-xs text-gray-400">Com o código válido, sua conta é aprovada automaticamente.</p>
+                </div>
+
                 <button onclick="enviarCadastro()" class="w-full bg-green-600 text-white font-black py-4 rounded-xl hover:bg-green-500 transition-all text-base shadow-lg shadow-green-900/50">
                     ENVIAR SOLICITAÇÃO
                 </button>
@@ -123,7 +129,7 @@
     </a>
 
     <!-- O link do JavaScript com versão atualizada -->
-    <script src="/static/app.js?v=20261017-5"></script>
+    <script src="/static/app.js?v=20261017-6"></script>
     <script> document.getElementById('password').addEventListener('keypress', function(e){ if(e.key === 'Enter') fazerLogin(); }); </script>
 </body>
 </html>
