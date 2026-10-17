@@ -807,3 +807,18 @@ body.page-dashboard, body.page-questions, body.page-notebooks, body.page-profile
     padding: 82px 12px 114px !important;
   }
 }
+
+/* Mantém a nova composição flush apesar das regras base mais específicas. */
+.page-questions .question-filter-panel {
+  padding: 0 !important;
+  border: 1px solid #dfe9e9 !important;
+  border-radius: 15px !important;
+  background: #fff !important;
+  box-shadow: 0 6px 24px rgba(33,64,70,.055) !important;
+  overflow: visible;
+}
+.page-questions .question-filter-workspace {
+  border: 0 !important;
+  border-bottom: 1px solid #e6eeee !important;
+  border-radius: 0 !important;
+}
