@@ -507,3 +507,38 @@
     box-sizing: border-box !important;
   }
 }
+
+
+/* Mobile: a barra inferior mantém altura fixa durante o overscroll do navegador.
+   O gesto de puxar a página para baixo não deve redimensionar a navegação. */
+@media screen and (max-width: 767px) {
+  body .resp-sidebar {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    height: calc(78px + env(safe-area-inset-bottom, 0px)) !important;
+    min-height: calc(78px + env(safe-area-inset-bottom, 0px)) !important;
+    max-height: calc(78px + env(safe-area-inset-bottom, 0px)) !important;
+    flex: 0 0 calc(78px + env(safe-area-inset-bottom, 0px)) !important;
+    flex-shrink: 0 !important;
+    transform: translateZ(0) !important;
+    overscroll-behavior: none !important;
+    transition: none !important;
+  }
+  body .resp-sidebar .resp-nav {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    flex: 0 0 100% !important;
+    align-self: stretch !important;
+  }
+  body .resp-sidebar .resp-nav > a.resp-nav-link[href="/dashboard"],
+  body .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"],
+  body .resp-sidebar .resp-nav > .resp-mobile-more-trigger {
+    height: 68px !important;
+    min-height: 68px !important;
+    max-height: 68px !important;
+    flex: 0 0 68px !important;
+    transform: none !important;
+  }
+}
