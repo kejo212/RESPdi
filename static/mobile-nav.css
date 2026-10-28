@@ -523,7 +523,7 @@
     flex-shrink: 0 !important;
     transform: translateZ(0) !important;
     overscroll-behavior: none !important;
-    transition: none !important;
+    transition: height .28s cubic-bezier(.22,1,.36,1), min-height .28s cubic-bezier(.22,1,.36,1), max-height .28s cubic-bezier(.22,1,.36,1), padding .28s cubic-bezier(.22,1,.36,1), box-shadow .28s ease !important;
   }
   body .resp-sidebar .resp-nav {
     height: 100% !important;
@@ -540,5 +540,61 @@
     max-height: 68px !important;
     flex: 0 0 68px !important;
     transform: none !important;
+  }
+}
+
+
+/* Na página de questões, o estado compacto reduz a barra inteira — não apenas os ícones.
+   A altura fixa continua valendo durante o overscroll, mas cede explicitamente ao estado
+   de navegação compacta controlado pelo scroll. */
+@media screen and (max-width: 767px) {
+  body.page-questions .resp-sidebar,
+  body.page-questions .resp-sidebar .resp-nav > a.resp-nav-link[href="/dashboard"],
+  body.page-questions .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"],
+  body.page-questions .resp-sidebar .resp-nav > .resp-mobile-more-trigger {
+    transition:
+      height .28s cubic-bezier(.22,1,.36,1),
+      min-height .28s cubic-bezier(.22,1,.36,1),
+      max-height .28s cubic-bezier(.22,1,.36,1),
+      padding .28s cubic-bezier(.22,1,.36,1),
+      gap .24s cubic-bezier(.22,1,.36,1),
+      box-shadow .28s ease !important;
+  }
+
+  body.page-questions.resp-nav-compact .resp-sidebar {
+    height: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+    min-height: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+    max-height: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+    flex-basis: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-top: 2px !important;
+    padding-bottom: calc(2px + env(safe-area-inset-bottom, 0px)) !important;
+    box-shadow: 0 -3px 16px rgba(27,61,68,.06) !important;
+  }
+
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > a.resp-nav-link[href="/dashboard"],
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"],
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > .resp-mobile-more-trigger {
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    flex-basis: 48px !important;
+  }
+
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-icon-mobile {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    flex-basis: 34px !important;
+  }
+
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > a.resp-nav-link[href="/questoes"] > .resp-nav-icon-mobile svg {
+    width: 19px !important;
+    height: 19px !important;
+  }
+
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > a.resp-nav-link[href="/dashboard"] .resp-nav-icon,
+  body.page-questions.resp-nav-compact .resp-sidebar .resp-nav > .resp-mobile-more-trigger .resp-mobile-more-icon {
+    width: 22px !important;
+    height: 22px !important;
   }
 }
